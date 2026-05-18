@@ -1,0 +1,1199 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FeatureIQ — Backlog Prioritiser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy:        #0f1e3c;
+      --navy-dark:   #0a1628;
+      --navy-mid:    #162a50;
+      --navy-soft:   #1e3a6e;
+      --yellow:      #f5c400;
+      --yellow-soft: #fdf3c0;
+      --yellow-mid:  #f5c40022;
+      --white:       #ffffff;
+      --off-white:   #f7f8fc;
+      --surface:     #eef1f8;
+      --border:      #dce3f0;
+      --border-dark: #c4cfe8;
+      --text-primary:   #0f1e3c;
+      --text-secondary: #4a5a80;
+      --text-muted:     #8a9ab8;
+      --green:  #0d9e6e;
+      --green-bg: #e6f7f2;
+      --amber:  #d97706;
+      --amber-bg: #fef3cd;
+      --red:    #dc2626;
+      --red-bg: #fde8e8;
+      --cyan:   #0369a1;
+      --cyan-bg: #e0f0fa;
+      --font: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --radius: 6px;
+      --shadow: 0 1px 3px rgba(15,30,60,0.08), 0 1px 2px rgba(15,30,60,0.04);
+      --shadow-md: 0 4px 12px rgba(15,30,60,0.1), 0 2px 4px rgba(15,30,60,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--off-white);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 13px;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .topnav {
+      height: 52px;
+      background: var(--navy-dark);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 3px solid var(--yellow);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--yellow);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--navy-dark);
+      letter-spacing: -0.03em;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-logo-text span { color: var(--yellow); }
+
+    .app {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-shadow: 2px 0 8px rgba(15,30,60,0.04);
+    }
+
+    .sidebar-block {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .block-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .block-title-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--yellow);
+      flex-shrink: 0;
+    }
+
+    .block-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .block-title-row .block-title { margin-bottom: 0; }
+
+    .sample-link {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--cyan);
+      text-decoration: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: color 0.15s;
+    }
+
+    .sample-link:hover { color: var(--navy); }
+
+    .upload-zone {
+      border: 1.5px dashed var(--border-dark);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--off-white);
+    }
+
+    .upload-zone:hover {
+      border-color: var(--navy-soft);
+      background: rgba(30,58,110,0.03);
+    }
+
+    .upload-zone.dragover {
+      border-color: var(--yellow);
+      background: var(--yellow-mid);
+    }
+
+    .upload-icon {
+      font-size: 18px;
+      margin-bottom: 5px;
+      color: var(--text-muted);
+    }
+
+    .upload-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .upload-label strong { color: var(--navy); font-weight: 600; }
+
+    .upload-success {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.6rem 0.75rem;
+      background: var(--green-bg);
+      border: 1px solid rgba(13,158,110,0.2);
+      border-radius: var(--radius);
+      margin-top: 0.5rem;
+    }
+
+    .upload-success-icon {
+      font-size: 14px;
+      color: var(--green);
+      flex-shrink: 0;
+    }
+
+    .upload-success-text {
+      font-size: 11px;
+      color: var(--green);
+      font-family: var(--mono);
+    }
+
+    #csvInput { display: none; }
+
+    .csv-spec {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.6rem 0.75rem;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 2;
+      margin-top: 0.6rem;
+    }
+
+    .weight-group { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1rem; }
+
+    .weight-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .weight-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .weight-num {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--navy);
+      background: var(--yellow-soft);
+      padding: 1px 7px;
+      border-radius: 3px;
+    }
+
+    input[type=range] {
+      width: 100%;
+      height: 4px;
+      appearance: none;
+      background: var(--surface);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--navy);
+      cursor: pointer;
+      border: 3px solid var(--white);
+      box-shadow: 0 0 0 1px var(--border-dark);
+      transition: transform 0.15s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .run-btn {
+      width: 100%;
+      height: 38px;
+      background: var(--navy-dark);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.15s;
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .run-btn::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      width: 4px; height: 100%;
+      background: var(--yellow);
+    }
+
+    .run-btn:hover { background: var(--navy-mid); }
+
+    .run-btn:disabled {
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .run-btn:disabled::after { background: var(--border); }
+
+    .clear-btn {
+      width: 100%;
+      height: 34px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.15s;
+    }
+
+    .clear-btn:hover { border-color: var(--border-dark); color: var(--text-secondary); }
+
+    .status-footer {
+      margin-top: auto;
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--off-white);
+    }
+
+    .spinner {
+      display: none;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--navy);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .spinner.on { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--off-white);
+    }
+
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+
+    .kpi-item {
+      padding: 1rem 1.5rem;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+
+    .kpi-item:last-child { border-right: none; }
+
+    .kpi-item.primary::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--yellow);
+    }
+
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--navy-dark);
+      font-family: var(--mono);
+      line-height: 1;
+    }
+
+    .kpi-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .toolbar {
+      height: 44px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.25rem;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .tab-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-pill:hover { color: var(--text-secondary); }
+
+    .tab-pill.active {
+      background: var(--navy-dark);
+      color: var(--white);
+      border-color: var(--navy-dark);
+    }
+
+    .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.25rem; }
+
+    .toolbar-info {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .toolbar-right { margin-left: auto; }
+
+    .export-btn {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-dark);
+      background: var(--white);
+      color: var(--navy);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .export-btn:hover {
+      background: var(--navy-dark);
+      color: var(--white);
+      border-color: var(--navy-dark);
+    }
+
+    .content-area { flex: 1; overflow-y: auto; }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 1rem;
+      padding: 3rem;
+    }
+
+    .empty-icon-wrap {
+      width: 64px; height: 64px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+    }
+
+    .empty-icon-inner {
+      width: 28px; height: 28px;
+      background: var(--surface);
+      border-radius: 4px;
+    }
+
+    .empty-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .empty-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 280px;
+      line-height: 1.6;
+    }
+
+    .empty-arrow {
+      font-size: 11px;
+      color: var(--yellow);
+      font-weight: 600;
+      background: var(--yellow-soft);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .table-wrap { padding: 1.25rem; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--white);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+    }
+
+    .data-table thead { background: var(--navy-dark); }
+
+    .data-table th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      border-right: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .data-table th:last-child { border-right: none; }
+    .data-table th.accent { color: var(--yellow); }
+
+    .data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: var(--off-white); }
+
+    .rank-badge {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .rank-1 { background: var(--yellow); color: var(--navy-dark); }
+    .rank-2 { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); }
+    .rank-3 { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); }
+    .rank-n { background: transparent; color: var(--text-muted); font-size: 12px; }
+
+    .feat-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--navy);
+      cursor: pointer;
+      display: inline-block;
+      transition: color 0.15s;
+    }
+
+    .feat-name:hover { color: var(--navy-soft); text-decoration: underline; text-underline-offset: 3px; }
+
+    .feat-name-input {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--navy);
+      background: var(--off-white);
+      border: 1px solid var(--navy-soft);
+      border-radius: 4px;
+      padding: 2px 7px;
+      outline: none;
+      width: 190px;
+      box-shadow: 0 0 0 3px rgba(30,58,110,0.08);
+    }
+
+    .jira-badge {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--cyan);
+      background: var(--cyan-bg);
+      border-radius: 3px;
+      padding: 2px 7px;
+      margin-top: 3px;
+    }
+
+    .notes-view {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 0;
+      border-bottom: 1px dashed transparent;
+      transition: all 0.15s;
+    }
+
+    .notes-view:hover { color: var(--text-secondary); border-color: var(--border-dark); }
+
+    .notes-input-edit {
+      font-size: 11px;
+      background: var(--off-white);
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-primary);
+      padding: 3px 7px;
+      outline: none;
+      width: 140px;
+      resize: none;
+      height: 40px;
+      font-family: var(--font);
+    }
+
+    .notes-input-edit:focus { border-color: var(--navy-soft); }
+
+    .score-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 22px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 0 6px;
+    }
+
+    .tag-green { background: var(--green-bg); color: var(--green); }
+    .tag-amber { background: var(--amber-bg); color: var(--amber); }
+    .tag-red   { background: var(--red-bg);   color: var(--red); }
+
+    .total-val {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--navy-dark);
+    }
+
+    .conf-block { display: flex; flex-direction: column; gap: 4px; }
+
+    .conf-bar-track {
+      width: 70px; height: 4px;
+      background: var(--surface);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .conf-bar-fill { height: 100%; border-radius: 2px; }
+
+    .conf-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .rationale-col {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 220px;
+    }
+
+    .chart-wrap { padding: 1.25rem; display: none; }
+
+    .chart-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    #chartWrap { position: relative; height: 340px; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">FQ</div>
+    <div class="nav-logo-text">Feature<span>IQ</span></div>
+  </div>
+</nav>
+
+<div class="app">
+
+  <aside class="sidebar">
+
+    <div class="sidebar-block">
+      <div class="block-title-row">
+        <div class="block-title"><div class="block-title-dot"></div>CSV Upload</div>
+        <span class="sample-link" onclick="downloadSample()">&#8595; Sample file</span>
+      </div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvInput').click()">
+        <div class="upload-icon">&#8593;</div>
+        <div class="upload-label"><strong>Click to upload</strong> or drag and drop<br>CSV files only</div>
+      </div>
+      <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
+      <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
+<div style="margin-top:0.6rem; font-size:10px; color:var(--text-muted); font-family:var(--mono);">
+  Upload a CSV export from JIRA to score, rank, and compare your backlog features using AI..
+</div>
+      <div id="uploadSuccess" style="display:none;" class="upload-success">
+        <div class="upload-success-icon">&#10003;</div>
+        <div class="upload-success-text" id="uploadSuccessText"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="block-title"><div class="block-title-dot"></div>Scoring Weights</div>
+      <div class="weight-group">
+        <div>
+          <div class="weight-header">
+            <div class="weight-name">User Impact</div>
+            <div class="weight-num" id="vImpact">5</div>
+          </div>
+          <input type="range" id="wImpact" min="0" max="10" value="5" oninput="updateWeights()">
+        </div>
+        <div>
+          <div class="weight-header">
+            <div class="weight-name">Effort (lower is better)</div>
+            <div class="weight-num" id="vEffort">5</div>
+          </div>
+          <input type="range" id="wEffort" min="0" max="10" value="5" oninput="updateWeights()">
+        </div>
+        <div>
+          <div class="weight-header">
+            <div class="weight-name">Strategic Alignment</div>
+            <div class="weight-num" id="vAlign">5</div>
+          </div>
+          <input type="range" id="wAlign" min="0" max="10" value="5" oninput="updateWeights()">
+        </div>
+      </div>
+      <button class="run-btn" id="scoreBtn" onclick="scoreFeatures()">&#9654; Run Prioritisation</button>
+      <button class="clear-btn" onclick="clearAll()">Clear workspace</button>
+    </div>
+
+    <div class="status-footer">
+      <div class="spinner" id="spinner"></div>
+      <div class="status-text" id="statusText">Ready to score.</div>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="kpi-bar" id="kpiBar" style="display:none;">
+      <div class="kpi-item primary">
+        <div class="kpi-label">Features scored</div>
+        <div class="kpi-value" id="kpiCount">0</div>
+        <div class="kpi-sub">this session</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-label">Top weighted score</div>
+        <div class="kpi-value" id="kpiTop">—</div>
+        <div class="kpi-sub" id="kpiTopName">—</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-label">Avg. user impact</div>
+        <div class="kpi-value" id="kpiImpact">—</div>
+        <div class="kpi-sub">out of 10</div>
+      </div>
+      <div class="kpi-item">
+        <div class="kpi-label">High confidence</div>
+        <div class="kpi-value" id="kpiConf">—</div>
+        <div class="kpi-sub">of features</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="tab-pill active" onclick="switchTab('table', this)">Table</button>
+      <button class="tab-pill" onclick="switchTab('chart', this)">Bar Chart</button>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-info" id="rowInfo">No data loaded</div>
+      <div class="toolbar-right">
+        <button class="export-btn" onclick="exportCSV()">&#8595; Export CSV</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon-wrap"><div class="empty-icon-inner"></div></div>
+        <div class="empty-title">No features scored yet</div>
+        <div class="empty-sub">Upload a CSV export from JIRA to score, rank, and compare your backlog features using AI.</div>
+        <div class="empty-arrow">&#8592; Start in the sidebar</div>
+      </div>
+
+      <div class="table-wrap" id="tableView" style="display:none;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:48px;">#</th>
+              <th>Feature</th>
+              <th>JIRA</th>
+              <th>Notes</th>
+              <th class="accent">Impact</th>
+              <th class="accent">Effort</th>
+              <th class="accent">Alignment</th>
+              <th class="accent">Score</th>
+              <th>Confidence</th>
+              <th>Rationale</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="chart-wrap" id="chartView">
+        <div class="chart-card">
+          <div class="chart-title">Weighted Score by Feature</div>
+          <div id="chartWrap">
+            <canvas id="myChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  let scoredData = [];
+  let chartInstance = null;
+  let csvMeta = {};
+
+  function tagClass(val) {
+    if (val >= 7) return 'score-tag tag-green';
+    if (val >= 4) return 'score-tag tag-amber';
+    return 'score-tag tag-red';
+  }
+
+  function computeScore(f, wI, wE, wA) {
+    return ((f.impact * wI) + ((10 - f.effort) * wE) + (f.alignment * wA)).toFixed(1);
+  }
+
+  function getWeights() {
+    return {
+      wI: parseFloat(document.getElementById('wImpact').value),
+      wE: parseFloat(document.getElementById('wEffort').value),
+      wA: parseFloat(document.getElementById('wAlign').value)
+    };
+  }
+
+  function confColor(c) {
+    if (c === 'High')   return '#0d9e6e';
+    if (c === 'Medium') return '#d97706';
+    return '#dc2626';
+  }
+
+  function confWidth(c) {
+    if (c === 'High')   return '90%';
+    if (c === 'Medium') return '55%';
+    return '22%';
+  }
+
+  function rankBadge(i) {
+    if (i === 0) return `<div class="rank-badge rank-1">1</div>`;
+    if (i === 1) return `<div class="rank-badge rank-2">2</div>`;
+    if (i === 2) return `<div class="rank-badge rank-3">3</div>`;
+    return `<div class="rank-badge rank-n">${i + 1}</div>`;
+  }
+
+  function updateKPIs(sorted, wI, wE, wA) {
+    document.getElementById('kpiBar').style.display = 'grid';
+    document.getElementById('kpiCount').textContent = sorted.length;
+    const top = sorted[0];
+    document.getElementById('kpiTop').textContent = computeScore(top, wI, wE, wA);
+    const nm = top.name;
+    document.getElementById('kpiTopName').textContent = nm.length > 18 ? nm.slice(0, 18) + '…' : nm;
+    document.getElementById('kpiImpact').textContent = (sorted.reduce((s, f) => s + f.impact, 0) / sorted.length).toFixed(1);
+    document.getElementById('kpiConf').textContent = sorted.filter(f => f.confidence === 'High').length;
+    document.getElementById('rowInfo').textContent = sorted.length + ' feature' + (sorted.length !== 1 ? 's' : '') + ' — ranked by weighted score';
+  }
+
+  function renderTable() {
+    const { wI, wE, wA } = getWeights();
+    const sorted = [...scoredData].sort((a, b) => computeScore(b, wI, wE, wA) - computeScore(a, wI, wE, wA));
+    updateKPIs(sorted, wI, wE, wA);
+
+    document.getElementById('tableBody').innerHTML = sorted.map((f, i) => {
+      const meta  = csvMeta[f.name] || {};
+      const jira  = meta.jiraId || '';
+      const notes = f.notes !== undefined ? f.notes : (meta.notes || '');
+      const conf  = f.confidence || 'Medium';
+      return `<tr>
+        <td>${rankBadge(i)}</td>
+        <td>
+          <div class="feat-name" onclick="editName(this,'${esc(f.name)}')">${esc(f.name)}</div>
+          ${jira ? `<div><span class="jira-badge">${esc(jira)}</span></div>` : ''}
+        </td>
+        <td>${jira ? `<span class="jira-badge">${esc(jira)}</span>` : `<span style="color:var(--text-muted);font-family:var(--mono);font-size:11px;">—</span>`}</td>
+        <td><div class="notes-view" onclick="editNote(this,'${esc(f.name)}')">${notes ? esc(notes) : `<span style="color:var(--border-dark)">+ add note</span>`}</div></td>
+        <td><span class="${tagClass(f.impact)}">${f.impact}</span></td>
+        <td><span class="${tagClass(10 - f.effort)}">${f.effort}</span></td>
+        <td><span class="${tagClass(f.alignment)}">${f.alignment}</span></td>
+        <td><div class="total-val">${computeScore(f, wI, wE, wA)}</div></td>
+        <td>
+          <div class="conf-block">
+            <div class="conf-bar-track"><div class="conf-bar-fill" style="width:${confWidth(conf)};background:${confColor(conf)};"></div></div>
+            <div class="conf-label" style="color:${confColor(conf)};">${conf}</div>
+          </div>
+        </td>
+        <td class="rationale-col">${esc(f.rationale)}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('tableView').style.display = 'block';
+    renderChart(sorted, wI, wE, wA);
+  }
+
+  function renderChart(sorted, wI, wE, wA) {
+    const labels = sorted.map(f => f.name.length > 20 ? f.name.slice(0, 20) + '…' : f.name);
+    const scores = sorted.map(f => parseFloat(computeScore(f, wI, wE, wA)));
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(document.getElementById('myChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Weighted Score',
+          data: scores,
+          backgroundColor: scores.map((_, i) => i === 0 ? '#f5c400' : '#0f1e3c18'),
+          borderColor:     scores.map((_, i) => i === 0 ? '#d4a800' : '#0f1e3c33'),
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f1e3c',
+            titleColor: '#f5c400',
+            bodyColor: 'rgba(255,255,255,0.65)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleFont: { family: 'JetBrains Mono', size: 11 },
+            bodyFont:  { family: 'JetBrains Mono', size: 10 },
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#8a9ab8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#dce3f0' }, border: { color: '#dce3f0' } },
+          y: { ticks: { color: '#8a9ab8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#dce3f0' }, border: { color: '#dce3f0' } }
+        }
+      }
+    });
+  }
+
+  function updateWeights() {
+    document.getElementById('vImpact').textContent = document.getElementById('wImpact').value;
+    document.getElementById('vEffort').textContent = document.getElementById('wEffort').value;
+    document.getElementById('vAlign').textContent  = document.getElementById('wAlign').value;
+    if (scoredData.length > 0) renderTable();
+  }
+
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tableView').style.display = tab === 'table' ? 'block' : 'none';
+    document.getElementById('chartView').style.display = tab === 'chart' ? 'block' : 'none';
+  }
+
+  function editName(el, original) {
+    const inp = document.createElement('input');
+    inp.className = 'feat-name-input';
+    inp.value = original;
+    el.replaceWith(inp);
+    inp.focus(); inp.select();
+    function save() {
+      const val = inp.value.trim() || original;
+      const span = document.createElement('div');
+      span.className = 'feat-name';
+      span.textContent = val;
+      span.onclick = function() { editName(this, val); };
+      inp.replaceWith(span);
+      const f = scoredData.find(x => x.name === original);
+      if (f) f.name = val;
+      if (csvMeta[original]) { csvMeta[val] = csvMeta[original]; delete csvMeta[original]; }
+    }
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+  }
+
+  function editNote(el, name) {
+    const f = scoredData.find(x => x.name === name);
+    if (!f) return;
+    const ta = document.createElement('textarea');
+    ta.className = 'notes-input-edit';
+    ta.value = f.notes || '';
+    ta.placeholder = 'Add a note...';
+    el.replaceWith(ta);
+    ta.focus();
+    function save() {
+      f.notes = ta.value.trim();
+      const div = document.createElement('div');
+      div.className = 'notes-view';
+      div.onclick = function() { editNote(this, name); };
+      div.innerHTML = f.notes ? esc(f.notes) : `<span style="color:var(--border-dark)">+ add note</span>`;
+      ta.replaceWith(div);
+    }
+    ta.addEventListener('blur', save);
+  }
+
+  function handleCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length === 0) return;
+
+      const headerLine = lines[0].toLowerCase();
+      const hasHeader = headerLine.includes('jira') || headerLine.includes('feature') || headerLine.includes('summary');
+      const startIdx = hasHeader ? 1 : 0;
+
+      csvMeta = {};
+      let count = 0;
+
+      lines.slice(startIdx).forEach(line => {
+        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+        const jiraId             = parts[0] || '';
+        const name               = parts[1] || '';
+        const notes              = parts[2] || '';
+        const description        = parts[3] || '';
+        const acceptanceCriteria = parts[4] || '';
+        const storyPoints        = parts[5] || '';
+        const epic               = parts[6] || '';
+        const priority           = parts[7] || '';
+        const labels             = parts[8] || '';
+
+        if (name) {
+          csvMeta[name] = { jiraId, notes, description, acceptanceCriteria, storyPoints, epic, priority, labels };
+          count++;
+        }
+      });
+
+      document.getElementById('uploadSuccess').style.display = 'flex';
+      document.getElementById('uploadSuccessText').textContent = file.name + ' — ' + count + ' features loaded';
+      document.getElementById('uploadZone').style.display = 'none';
+      document.getElementById('statusText').textContent = count + ' features ready to score.';
+    };
+    reader.readAsText(file);
+  }
+
+  function downloadSample() {
+    const sample = [
+      'JIRA_ID,Feature Name,Notes,Description,Acceptance Criteria,Story Points,Epic,Priority,Labels',
+      'PROJ-101,Dark mode for mobile app,340+ user requests,As a user I want a dark theme to reduce eye strain at night,"Theme toggle in settings, persists across sessions, covers all screens",5,User Experience,High,"ux,accessibility"',
+      'PROJ-102,Bulk export to CSV,Blocker for 3 enterprise deals,As an admin I want to export all data to CSV for reporting,"Export button on dashboard, includes all fields, max 10000 rows",8,Data & Reporting,Critical,"enterprise,reporting"',
+      'PROJ-103,Onboarding checklist for new users,Activation rate down 12%,As a new user I want a guided checklist to discover core features,"Checklist on first login, tracks completion, dismissable, 5 key actions",3,Growth,High,"onboarding,activation"',
+      'PROJ-104,Password reset via email,200+ support tickets per month,As a user I want to reset my password via email,"Reset link sent within 60s, expires in 1 hour, works on all email clients",2,Core Auth,Critical,"auth,support-reduction"',
+      'PROJ-105,In-app push notifications,Marketing re-engagement blocked,As a user I want to receive relevant in-app alerts,"Permission prompt on first login, notification centre, mark as read",13,Engagement,Medium,"engagement,marketing"',
+      'PROJ-106,Advanced search and filters,Top enterprise request,As a power user I want to filter results by multiple criteria,"Filter by date, status, owner, tag. Filters persist. Results update instantly",8,Search,High,"enterprise,power-users"',
+      'PROJ-107,Two-factor authentication,Compliance requirement,As an admin I want to enforce 2FA for security compliance,"TOTP support, SMS fallback, recovery codes, admin enforcement toggle",5,Security,Critical,"security,compliance"',
+      'PROJ-108,API access for developers,5 partner integrations waiting,As a developer I want a REST API to integrate with internal tools,"API key management, rate limiting, full CRUD on core entities, docs",21,Platform,High,"api,partnerships"',
+    ].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([sample], { type: 'text/csv' }));
+    a.download = 'sample-backlog-rich.csv';
+    a.click();
+  }
+
+  const uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) handleCSV({ target: { files: [file] } });
+  });
+
+  async function scoreFeatures() {
+    const features = Object.keys(csvMeta);
+    if (!features.length) return alert('Please upload a CSV file first.');
+
+    const btn = document.getElementById('scoreBtn');
+    const spinner = document.getElementById('spinner');
+    const statusText = document.getElementById('statusText');
+
+    btn.disabled = true;
+    spinner.classList.add('on');
+    statusText.textContent = 'Scoring ' + features.length + ' features...';
+
+    try {
+      const res = await fetch('/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          features: features.map(name => ({ name, ...(csvMeta[name] || {}) }))
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      scoredData = data.results;
+      statusText.textContent = scoredData.length + ' features scored.';
+      renderTable();
+    } catch (err) {
+      statusText.textContent = 'Error. Check terminal.';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      spinner.classList.remove('on');
+    }
+  }
+
+  function exportCSV() {
+    if (!scoredData.length) return;
+    const { wI, wE, wA } = getWeights();
+    const sorted = [...scoredData].sort((a, b) => computeScore(b, wI, wE, wA) - computeScore(a, wI, wE, wA));
+    const rows = [['Rank', 'JIRA ID', 'Feature', 'Impact', 'Effort', 'Alignment', 'Weighted Score', 'Confidence', 'Notes', 'Rationale']];
+    sorted.forEach((f, i) => {
+      const meta = csvMeta[f.name] || {};
+      rows.push([i + 1, meta.jiraId || '', f.name, f.impact, f.effort, f.alignment, computeScore(f, wI, wE, wA), f.confidence || 'Medium', f.notes || '', f.rationale]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'feature-prioritisation.csv';
+    a.click();
+  }
+
+  function clearAll() {
+    scoredData = []; csvMeta = {};
+    document.getElementById('emptyState').style.display = 'flex';
+    document.getElementById('tableView').style.display = 'none';
+    document.getElementById('chartView').style.display = 'none';
+    document.getElementById('kpiBar').style.display = 'none';
+    document.getElementById('statusText').textContent = 'Ready to score.';
+    document.getElementById('rowInfo').textContent = 'No data loaded';
+    document.getElementById('uploadSuccess').style.display = 'none';
+    document.getElementById('uploadZone').style.display = 'block';
+    document.getElementById('csvInput').value = '';
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>
