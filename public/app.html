@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FeatureIQ — AI Backlog Prioritiser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <div class="nav-logo">
+      <div class="nav-logo-mark">FQ</div>
+      <div class="nav-logo-text">Feature<span>IQ</span></div>
+    </div>
+    <div class="nav-tag">AI-Powered</div>
+  </div>
+  <div class="nav-search-wrap">
+    <span class="nav-search-icon">✦</span>
+    <input class="nav-search" id="aiSearch" placeholder="Ask FeatureIQ anything… e.g. What are our top risks?" onkeydown="handleAISearch(event)">
+    <span class="nav-search-kbd">⌘ K</span>
+  </div>
+  <div class="nav-right">
+    <button class="dark-pill" onclick="DarkMode.toggle()">
+      <div class="pill-track" id="pillTrack"><div class="pill-thumb"></div></div>
+      <span class="pill-label" id="pillLabel">DARK</span>
+    </button>
+    <button class="nav-upload-btn" onclick="document.getElementById('csvInput').click()">↑ Upload CSV</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none;">
+  </div>
+</nav>
+
+<div class="app">
+
+  <aside class="leftnav">
+    <nav class="leftnav-items">
+      <div class="leftnav-item active" id="nav-workspace" onclick="switchView('workspace',this)">
+        <span class="leftnav-icon">⊞</span><span class="leftnav-label">Analysis Workspace</span>
+      </div>
+      <div class="leftnav-item" id="nav-matrix" onclick="switchView('matrix',this)">
+        <span class="leftnav-icon">◎</span><span class="leftnav-label">Priority Matrix</span>
+      </div>
+      <div class="leftnav-item" id="nav-opportunities" onclick="switchView('opportunities',this)">
+        <span class="leftnav-icon">◈</span><span class="leftnav-label">Product Opportunities</span>
+      </div>
+      <div class="leftnav-item" id="nav-summary" onclick="switchView('summary',this)">
+        <span class="leftnav-icon">▤</span><span class="leftnav-label">Executive Summary</span>
+      </div>
+    </nav>
+    <div class="leftnav-howto">
+      <div class="howto-title"><span>?</span> How it works</div>
+      <div class="howto-steps">
+        <div class="howto-step active" id="step1"><div class="step-num">1</div><div class="step-text">Upload your JIRA CSV</div></div>
+        <div class="howto-step" id="step2"><div class="step-num">2</div><div class="step-text">Set team priorities</div></div>
+        <div class="howto-step" id="step3"><div class="step-num">3</div><div class="step-text">AI analyses backlog</div></div>
+        <div class="howto-step" id="step4"><div class="step-num">4</div><div class="step-text">Make better decisions</div></div>
+      </div>
+    </div>
+    <div class="leftnav-trust">
+      <span class="trust-icon">🔒</span>
+      <div><div class="trust-title">No data is stored.</div><div class="trust-sub">Processed securely in your session only.</div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ZERO STATE -->
+    <div id="view-workspace" class="view active">
+      <div id="zeroState">
+        <div class="zero-header">
+          <h1 class="zero-title">No analysis yet</h1>
+          <p class="zero-sub">Upload your JIRA CSV to get started with AI-powered backlog analysis.</p>
+        </div>
+        <div class="zero-upload-zone" id="uploadZone" onclick="document.getElementById('csvInput').click()">
+          <div class="zero-upload-icon-wrap"><div class="zero-upload-icon">↑</div></div>
+          <div class="zero-upload-title">Upload your JIRA CSV</div>
+          <div class="zero-upload-sub">Drag and drop your file here, or click to browse</div>
+          <div class="zero-upload-hint">Supports CSV export from Jira</div>
+        </div>
+        <div class="zero-features">
+          <div class="zero-features-title">What you'll get after analysis</div>
+          <div class="zero-features-grid">
+            <div class="zero-feature-card"><div class="zero-feature-icon" style="background:#eef2ff;color:#4f46e5;">⬆</div><div class="zero-feature-name">AI Priority Scores</div><div class="zero-feature-desc">Get AI-powered priority scores for every item</div></div>
+            <div class="zero-feature-card"><div class="zero-feature-icon" style="background:#fef3c7;color:#d97706;">◈</div><div class="zero-feature-name">Priority Matrix</div><div class="zero-feature-desc">Visualise impact vs effort to focus on what matters</div></div>
+            <div class="zero-feature-card"><div class="zero-feature-icon" style="background:#f0fdf4;color:#16a34a;">✦</div><div class="zero-feature-name">Actionable Insights</div><div class="zero-feature-desc">Discover patterns, risks, and quick wins</div></div>
+            <div class="zero-feature-card"><div class="zero-feature-icon" style="background:#fdf2f8;color:#db2777;">▤</div><div class="zero-feature-name">Executive Summary</div><div class="zero-feature-desc">Share AI-generated reports with stakeholders</div></div>
+          </div>
+        </div>
+        <div class="zero-tip">
+          <span class="tip-icon">💡</span>
+          <span class="tip-label">Tip</span>
+          <span class="tip-text">Export your backlog from Jira as CSV with columns like ID, Summary, Description, Acceptance Criteria, Notes, etc.</span>
+          <span class="tip-link" onclick="CSVHandler.downloadSample()">Download sample ↗</span>
+        </div>
+      </div>
+
+      <!-- WORKSPACE (shown after scoring) -->
+      <div id="workspaceState" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+        <div class="workspace-header">
+          <div class="workspace-header-left">
+            <h1 class="workspace-title">Backlog Analysis <span class="workspace-badge">✓</span></h1>
+            <p class="workspace-sub" id="workspaceSub"></p>
+          </div>
+          <div class="workspace-header-right">
+            <button class="ws-btn ghost" onclick="openPrioritiesModal()">⚙ Re-run</button>
+            <button class="ws-btn ghost" onclick="App.exportCSV()">↓ Export CSV</button>
+            <button class="ws-btn primary" onclick="PresentationMode.open()">▶ Present</button>
+            <button class="ws-btn danger" onclick="App.clearAll()">✕ Clear</button>
+          </div>
+        </div>
+
+        <div class="kpi-bar">
+          <div class="kpi-item kpi-primary">
+            <div class="kpi-icon" style="background:#eef2ff;color:#4f46e5;">⊞</div>
+            <div class="kpi-data"><div class="kpi-label">Total Features</div><div class="kpi-value" id="kpiCount">0</div><div class="kpi-sub">analysed</div></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-icon" style="background:#fef2f2;color:#dc2626;">↑</div>
+            <div class="kpi-data"><div class="kpi-label">High Priority</div><div class="kpi-value" id="kpiHighPriority">0</div><div class="kpi-sub" id="kpiHighPct">of total</div></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-icon" style="background:#f0fdf4;color:#16a34a;">⚡</div>
+            <div class="kpi-data"><div class="kpi-label">Quick Wins</div><div class="kpi-value" id="kpiQuickWins">0</div><div class="kpi-sub">high impact, low effort</div></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-icon" style="background:#fdf2f8;color:#db2777;">◎</div>
+            <div class="kpi-data"><div class="kpi-label">Avg Confidence</div><div class="kpi-value" id="kpiConfidence">0%</div><div class="kpi-sub">overall</div></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-icon" style="background:#fef3c7;color:#d97706;">⚠</div>
+            <div class="kpi-data"><div class="kpi-label">High Risk</div><div class="kpi-value" id="kpiHighRisk">0</div><div class="kpi-sub">need attention</div></div>
+          </div>
+        </div>
+
+        <div class="insight-banner" id="insightBanner" style="display:none;">
+          <span class="insight-icon">✦</span>
+          <span class="insight-label">AI Insight</span>
+          <span class="insight-text" id="insightText"></span>
+          <span class="insight-link" onclick="switchView('summary',document.getElementById('nav-summary'))">View all insights →</span>
+        </div>
+
+        <div class="table-area">
+          <div class="table-toolbar">
+            <div class="table-toolbar-left">
+              <div class="tt-title">Backlog Intelligence</div>
+              <div class="tt-sub">AI-prioritised features — click any row for full AI analysis</div>
+            </div>
+            <div class="table-toolbar-right">
+              <div class="search-wrap">
+                <span class="search-icon-inner">⌕</span>
+                <input class="search-input" id="searchInput" placeholder="Search by ID or title..." oninput="App.filterTable()">
+              </div>
+              <select class="filter-sel" id="epicFilter" onchange="App.filterTable()"><option value="">All epics</option></select>
+              <select class="filter-sel" id="riskFilter" onchange="App.filterTable()">
+                <option value="">All risk levels</option>
+                <option value="Low">Low risk</option>
+                <option value="Medium">Medium risk</option>
+                <option value="High">High risk</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="skeletonLoader" style="display:none;">
+            <div class="skeleton-wrap">
+              <div class="skel-header"></div>
+              <div id="skeletonRows"></div>
+            </div>
+          </div>
+
+          <div id="tableWrap" style="display:none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:90px;">JIRA ID</th>
+                  <th>Title</th>
+                  <th style="width:140px;">AI Score ↓</th>
+                  <th style="width:110px;">Priority</th>
+                  <th style="width:130px;">Confidence</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="whats-next" id="whatsNext" style="display:none;">
+          <div class="wn-left">
+            <span class="wn-icon">✦</span>
+            <div><div class="wn-title">What's next?</div><div class="wn-sub">Explore the Priority Matrix or view your Executive Summary.</div></div>
+          </div>
+          <div class="wn-right">
+            <button class="wn-btn ghost" onclick="switchView('matrix',document.getElementById('nav-matrix'))">View Priority Matrix</button>
+            <button class="wn-btn primary" onclick="switchView('summary',document.getElementById('nav-summary'))">Generate Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRIORITY MATRIX -->
+    <div id="view-matrix" class="view" style="display:none; flex-direction:column;">
+      <div class="workspace-header">
+        <div class="workspace-header-left">
+          <h1 class="workspace-title">Priority Matrix</h1>
+          <p class="workspace-sub">Visualise impact vs effort. Top-left quadrant features are your Quick Wins.</p>
+        </div>
+      </div>
+      <div class="matrix-card">
+        <div class="matrix-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#16a34a;"></div>Quick Wins</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Strategic Bets</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d97706;"></div>Fill-ins</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#dc2626;"></div>Reconsider</div>
+        </div>
+        <div style="position:relative;height:460px;"><canvas id="matrixChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- PRODUCT OPPORTUNITIES -->
+    <div id="view-opportunities" class="view" style="display:none; flex-direction:column;">
+      <div class="workspace-header">
+        <div class="workspace-header-left">
+          <h1 class="workspace-title">Product Opportunities</h1>
+          <p class="workspace-sub">AI-detected patterns, themes, and growth opportunities in your backlog.</p>
+        </div>
+      </div>
+      <div id="opportunitiesContent" class="opportunities-grid"></div>
+    </div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div id="view-summary" class="view" style="display:none; flex-direction:column;">
+      <div class="workspace-header">
+        <div class="workspace-header-left">
+          <h1 class="workspace-title">Executive Summary</h1>
+          <p class="workspace-sub">AI-generated report ready to share with stakeholders.</p>
+        </div>
+        <div class="workspace-header-right">
+          <button class="ws-btn primary" onclick="PresentationMode.open()">▶ Present</button>
+        </div>
+      </div>
+      <div id="summaryContent" class="summary-content"></div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT DRAWER -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div><div class="drawer-jira" id="drawerJira"></div><div class="drawer-name" id="drawerName"></div></div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" onclick="switchDrawerTab('overview',this)">Overview</button>
+      <button class="drawer-tab" onclick="switchDrawerTab('details',this)">Details</button>
+      <button class="drawer-tab" onclick="switchDrawerTab('ai',this)">AI Analysis</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+
+</div>
+
+<!-- PRIORITIES MODAL -->
+<div id="prioritiesModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Set Team Priorities</div>
+      <div class="modal-sub">Tell FeatureIQ what your team cares about most. This shapes how Claude scores each feature.</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-priorities" id="modalPriorities"></div>
+      <textarea id="additionalContext" class="modal-context" placeholder="Any additional context? e.g. cost cutting phase, launching in a new market next quarter..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel" onclick="closePrioritiesModal()">Cancel</button>
+      <button class="modal-run" onclick="runFromModal()">▶ Run Prioritisation</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESENTATION OVERLAY -->
+<div class="present-overlay" id="presentOverlay">
+  <div class="present-nav">
+    <div class="present-logo">Feature<span>IQ</span></div>
+    <button class="present-close" onclick="PresentationMode.close()">✕ Close</button>
+  </div>
+  <div class="present-content">
+    <div class="present-label">Product Backlog Prioritisation</div>
+    <div class="present-title">AI-Scored Feature Rankings</div>
+    <div class="present-kpis" id="presentKpis"></div>
+    <table class="present-table">
+      <thead><tr><th>#</th><th>Feature</th><th>JIRA</th><th class="y">Score</th><th class="y">Priority</th><th>Risk</th><th>Next Step</th><th>Rationale</th></tr></thead>
+      <tbody id="presentBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="js/csvHandler.js"></script>
+<script src="js/tableRenderer.js"></script>
+<script src="js/chartRenderer.js"></script>
+<script src="js/exportHandler.js"></script>
+<script src="js/presentationMode.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+const DarkMode = (() => {
+  function toggle() {
+    const on = document.body.classList.toggle('dark');
+    document.getElementById('pillTrack').classList.toggle('on', on);
+    document.getElementById('pillLabel').textContent = on ? 'LIGHT' : 'DARK';
+    localStorage.setItem('fiq-dark', on ? '1' : '0');
+  }
+  function init() {
+    if (localStorage.getItem('fiq-dark') === '1') {
+      document.body.classList.add('dark');
+      document.getElementById('pillTrack').classList.add('on');
+      document.getElementById('pillLabel').textContent = 'LIGHT';
+    }
+  }
+  return { toggle, init };
+})();
+
+function showToast(msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span class="toast-icon">${{success:'✓',error:'✕',info:'•'}[type]||'•'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+function switchView(view, el) {
+  document.querySelectorAll('.view').forEach(v => { v.style.display='none'; v.classList.remove('active'); });
+  document.querySelectorAll('.leftnav-item').forEach(i => i.classList.remove('active'));
+  const t = document.getElementById('view-'+view);
+  if (t) { t.style.display='flex'; t.classList.add('active'); }
+  if (el) el.classList.add('active');
+}
+
+function openDrawer(feature) {
+  const meta = CSVHandler.getMeta()[feature.name] || {};
+  document.getElementById('drawerJira').textContent = meta.jiraId || '—';
+  document.getElementById('drawerName').textContent = feature.name;
+  document.querySelectorAll('.drawer-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  showDrawerTab('overview', feature, meta);
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('active');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('active');
+}
+
+function switchDrawerTab(tab, el) {
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const f = window._drawerFeature;
+  if (f) showDrawerTab(tab, f, CSVHandler.getMeta()[f.name]||{});
+}
+
+function showDrawerTab(tab, feature, meta) {
+  window._drawerFeature = feature;
+  const body = document.getElementById('drawerBody');
+  const cc = c => c==='High'?'#16a34a':c==='Medium'?'#d97706':'#dc2626';
+  const cw = c => c==='High'?'90%':c==='Medium'?'55%':'22%';
+  const rc = r => r==='Low'?'#16a34a':r==='Medium'?'#d97706':'#dc2626';
+  const rb = r => r==='Low'?'#f0fdf4':r==='Medium'?'#fef3c7':'#fef2f2';
+  const chipC = v => v>=7?'#16a34a':v>=4?'#d97706':'#dc2626';
+  const chipB = v => v>=7?'#f0fdf4':v>=4?'#fef3c7':'#fef2f2';
+
+  if (tab==='overview') {
+    body.innerHTML = `
+      <div class="drawer-section">
+        <div class="drawer-score-big">${feature.score}</div>
+        <div class="drawer-score-label">AI Priority Score</div>
+        <div class="drawer-score-bar"><div style="width:${Math.min(parseFloat(feature.score)/1.5,100)}%;height:100%;background:var(--yellow);border-radius:3px;transition:width 0.6s ease;"></div></div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-metrics">
+          ${['impact','effort','alignment'].map(dim => `
+          <div class="drawer-metric">
+            <div class="dm-label">${dim.charAt(0).toUpperCase()+dim.slice(1)}</div>
+            <div class="dm-val" style="color:${dim==='effort'?chipC(10-feature[dim]):chipC(feature[dim])}">${feature[dim]}<span>/10</span></div>
+            <div class="dm-bar"><div style="width:${feature[dim]*10}%;background:${dim==='effort'?chipC(10-feature[dim]):chipC(feature[dim])};height:100%;border-radius:2px;transition:width 0.5s ease;"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-row"><div class="dr-label">Risk</div>
+          <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:${rb(feature.risk||'Low')};color:${rc(feature.risk||'Low')};font-family:var(--mono);text-transform:uppercase;letter-spacing:0.04em;">${feature.risk||'Low'}</span>
+        </div>
+        <div class="drawer-row"><div class="dr-label">Confidence</div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="width:100px;height:4px;background:var(--gray-2);border-radius:2px;overflow:hidden;"><div style="width:${cw(feature.confidence||'Medium')};height:100%;background:${cc(feature.confidence||'Medium')};border-radius:2px;"></div></div>
+            <div style="font-size:10px;font-weight:600;color:${cc(feature.confidence||'Medium')};font-family:var(--mono);text-transform:uppercase;">${feature.confidence||'Medium'}</div>
+          </div>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="dr-label" style="margin-bottom:6px;">Next Step</div>
+        <div class="drawer-next">${feature.nextStep||'—'}</div>
+      </div>
+      ${meta.jiraId?`<button class="view-in-jira" onclick="showToast('Opening in JIRA...','info')">View in Jira ↗</button>`:''}
+    `;
+  } else if (tab==='details') {
+    const rows = [
+      ['Epic', meta.epic],['JIRA Priority', meta.priority],
+      ['Story Points', meta.storyPoints ? meta.storyPoints+' SP' : null],
+      ['Labels', meta.labels],
+    ].filter(r=>r[1]);
+    body.innerHTML = `
+      <div class="drawer-section">${rows.map(r=>`<div class="drawer-row"><div class="dr-label">${r[0]}</div><span class="detail-tag">${r[1]}</span></div>`).join('') || '<div style="color:var(--text-3);font-size:12px;">No additional details in CSV.</div>'}</div>
+      ${meta.description?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Description</div><div class="drawer-desc">${meta.description}</div></div>`:''}
+      ${meta.acceptanceCriteria?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Acceptance Criteria</div><div class="drawer-desc">${meta.acceptanceCriteria}</div></div>`:''}
+      ${meta.notes?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Notes</div><div class="drawer-desc">${meta.notes}</div></div>`:''}
+    `;
+  } else {
+    body.innerHTML = `
+      <div class="drawer-section">
+        <div class="ai-reasoning-title">✦ AI Reasoning</div>
+        <div class="ai-reasoning-text">${feature.rationale}</div>
+      </div>
+      <div class="drawer-section">
+        <div class="dr-label" style="margin-bottom:8px;">Key Signals</div>
+        <div class="signals-list">
+          <div class="signal-item"><span class="signal-dot" style="background:#f5c400;"></span>Impact score based on ${meta.description?'user story and acceptance criteria':'feature description'}</div>
+          <div class="signal-item"><span class="signal-dot" style="background:#2563eb;"></span>Effort score ${meta.storyPoints?`informed by ${meta.storyPoints} story points`:'estimated from scope description'}</div>
+          <div class="signal-item"><span class="signal-dot" style="background:#16a34a;"></span>Alignment score based on ${meta.epic?`epic: ${meta.epic}`:'feature context'}</div>
+          ${feature.risk==='High'?`<div class="signal-item"><span class="signal-dot" style="background:#dc2626;"></span>High risk: review dependencies before committing</div>`:''}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function openPrioritiesModal() {
+  const priorities = ['Maximise user impact','Minimise engineering effort','Align with company strategy','Focus on quick wins','Prioritise compliance and security','Support enterprise and B2B growth'];
+  const grid = document.getElementById('modalPriorities');
+  grid.innerHTML = priorities.map(p => `
+    <label class="modal-priority-item">
+      <input type="checkbox" class="priority-checkbox" value="${p}">
+      <span class="modal-p-check"></span>
+      <span class="modal-p-label">${p}</span>
+    </label>
+  `).join('');
+  grid.querySelectorAll('.modal-priority-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const cb = item.querySelector('input');
+      cb.checked = !cb.checked;
+      item.classList.toggle('checked', cb.checked);
+      item.querySelector('.modal-p-check').textContent = cb.checked ? '✓' : '';
+    });
+  });
+  document.getElementById('prioritiesModal').style.display = 'flex';
+}
+
+function closePrioritiesModal() {
+  document.getElementById('prioritiesModal').style.display = 'none';
+}
+
+function runFromModal() {
+  closePrioritiesModal();
+  App.scoreFeatures();
+}
+
+function handleAISearch(e) {
+  if (e.key==='Enter') {
+    showToast('AI search coming in v2 — great idea though!', 'info');
+    e.target.value = '';
+  }
+}
+
+function exportCSV() { App.exportCSV(); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  DarkMode.init();
+  document.getElementById('csvInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) App.handleFile(file);
+  });
+  const uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) App.handleFile(file);
+  });
+});
+</script>
+</body>
+</html>
