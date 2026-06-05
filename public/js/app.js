@@ -1,9 +1,9 @@
 // ── MoSCoW helpers ────────────────────────────────────────────────────────
 
 function getMoSCoW(feature) {
-  const impact    = feature.impact    || 0;
-  const effort    = feature.effort    || 0;
-  const alignment = feature.alignment || 0;
+  var impact    = feature.impact    || 0;
+  var effort    = feature.effort    || 0;
+  var alignment = feature.alignment || 0;
   if (impact >= 7 && effort <= 5 && alignment >= 7) return 'must';
   if (impact >= 7 && alignment >= 7)                return 'should';
   if (impact >= 5 || alignment >= 5)                return 'could';
@@ -97,11 +97,12 @@ const App = (() => {
       hideSkeleton();
       renderAll();
       setStep(4);
+      unlockNav();
       showToast(scoredData.length + ' features scored successfully', 'success');
 
     } catch (err) {
       hideSkeleton();
-      showToast('Scoring failed. Check terminal for details.', 'error');
+      showToast('Scoring failed: ' + err.message, 'error');
       console.error(err);
     }
   }
@@ -109,19 +110,19 @@ const App = (() => {
   // ── Skeleton & loading ──────────────────────────────────────────────────
 
   function showSkeleton(count) {
-    document.getElementById('tableWrap').style.display    = 'none';
+    document.getElementById('tableWrap').style.display      = 'none';
     document.getElementById('skeletonLoader').style.display = 'block';
     const rows = document.getElementById('skeletonRows');
     rows.innerHTML = Array.from({ length: Math.min(count, 6) }).map((_, i) => `
       <div class="skel-row" style="animation-delay:${i * 0.1}s;">
-        <div class="skel-block" style="width:70px;height:14px;"></div>
+        <div class="skel-block" style="width:70px;height:13px;"></div>
         <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
-          <div class="skel-block" style="width:${160 + i * 20}px;height:14px;"></div>
+          <div class="skel-block" style="width:${160 + i * 20}px;height:13px;"></div>
           <div class="skel-block" style="width:80px;height:11px;"></div>
         </div>
-        <div class="skel-block" style="width:60px;height:20px;border-radius:4px;"></div>
-        <div class="skel-block" style="width:70px;height:20px;border-radius:5px;"></div>
-        <div class="skel-block" style="width:80px;height:16px;"></div>
+        <div class="skel-block" style="width:60px;height:18px;border-radius:4px;"></div>
+        <div class="skel-block" style="width:80px;height:18px;border-radius:5px;"></div>
+        <div class="skel-block" style="width:72px;height:14px;"></div>
       </div>
     `).join('');
   }
@@ -140,10 +141,8 @@ const App = (() => {
   }
 
   function startLoadingCounter(total) {
-    const csvMeta    = CSVHandler.getMeta();
-    const names      = Object.keys(csvMeta);
+    const names      = Object.keys(CSVHandler.getMeta());
     let current      = 0;
-
     const overlay    = document.getElementById('loadingOverlay');
     const bar        = document.getElementById('loadingBar');
     const currEl     = document.getElementById('loadingCurrent');
@@ -151,18 +150,20 @@ const App = (() => {
     const nameEl     = document.getElementById('loadingFeatureName');
     const statusText = document.getElementById('statusText');
     const statusDot  = document.getElementById('statusDot');
+    const statusWrap = document.getElementById('leftnavStatus');
 
-    if (totalEl)  totalEl.textContent  = total;
-    if (overlay)  overlay.style.display = 'flex';
-    if (statusDot) statusDot.className = 'status-dot loading';
+    if (totalEl)   totalEl.textContent   = total;
+    if (overlay)   overlay.style.display = 'flex';
+    if (statusDot) statusDot.className   = 'status-dot loading';
+    if (statusWrap) statusWrap.style.display = 'flex';
 
     const interval = setInterval(() => {
       current = Math.min(current + 1, total);
       const pct = Math.round((current / total) * 100);
-      if (bar)      bar.style.width      = pct + '%';
-      if (currEl)   currEl.textContent   = current;
-      if (nameEl)   nameEl.textContent   = names[current - 1] || '';
-      if (statusText) statusText.textContent = 'Scoring feature ' + current + ' of ' + total + '...';
+      if (bar)       bar.style.width       = pct + '%';
+      if (currEl)    currEl.textContent    = current;
+      if (nameEl)    nameEl.textContent    = names[current - 1] || '';
+      if (statusText) statusText.textContent = 'Scoring ' + current + ' of ' + total + '...';
       if (current >= total) clearInterval(interval);
     }, Math.max(600, 10000 / total));
 
@@ -199,12 +200,12 @@ const App = (() => {
   }
 
   function updateKPIs(sorted) {
-    const csvMeta      = CSVHandler.getMeta();
-    const mustShip     = sorted.filter(f => getMoSCoW(f) === 'must').length;
-    const quickWins    = sorted.filter(f => f.impact >= 6 && f.effort <= 5).length;
-    const highRisk     = sorted.filter(f => f.risk === 'High').length;
-    const highConf     = sorted.filter(f => f.confidence === 'High').length;
-    const confPct      = Math.round((highConf / sorted.length) * 100);
+    const csvMeta   = CSVHandler.getMeta();
+    const mustShip  = sorted.filter(f => getMoSCoW(f) === 'must').length;
+    const quickWins = sorted.filter(f => f.impact >= 6 && f.effort <= 5).length;
+    const highRisk  = sorted.filter(f => f.risk === 'High').length;
+    const highConf  = sorted.filter(f => f.confidence === 'High').length;
+    const confPct   = Math.round((highConf / sorted.length) * 100);
 
     document.getElementById('kpiCount').textContent        = sorted.length;
     document.getElementById('kpiHighPriority').textContent = mustShip;
@@ -232,7 +233,7 @@ const App = (() => {
     }
 
     if (insight) {
-      document.getElementById('insightText').textContent = insight;
+      document.getElementById('insightText').textContent    = insight;
       document.getElementById('insightBanner').style.display = 'flex';
     }
   }
@@ -247,21 +248,18 @@ const App = (() => {
     buildOpportunities(sorted);
     buildSummary(sorted);
     PresentationMode.build(sorted);
-
     document.getElementById('whatsNext').style.display = 'flex';
-    const clearBtn = document.getElementById('clearBtn');
-    if (clearBtn) clearBtn.style.display = 'flex';
+    const statusWrap = document.getElementById('leftnavStatus');
+    if (statusWrap) statusWrap.style.display = 'flex';
   }
 
   function renderTable() {
-    const filtered = getFiltered();
-    const csvMeta  = CSVHandler.getMeta();
-
+    const filtered  = getFiltered();
+    const csvMeta   = CSVHandler.getMeta();
     const confColor = c => c === 'High' ? '#16a34a' : c === 'Medium' ? '#d97706' : '#dc2626';
     const confWidth = c => c === 'High' ? '90%'     : c === 'Medium' ? '55%'     : '22%';
-    const chipC     = v => v >= 7 ? '#16a34a' : v >= 4 ? '#d97706' : '#dc2626';
 
-    document.getElementById('tableBody').innerHTML = filtered.map((f, i) => {
+    document.getElementById('tableBody').innerHTML = filtered.map(f => {
       const meta       = csvMeta[f.name] || {};
       const jira       = meta.jiraId || '—';
       const conf       = f.confidence || 'Medium';
@@ -280,7 +278,7 @@ const App = (() => {
         '</td>' +
         '<td>' +
           '<div class="score-cell">' +
-            '<div class="score-num">' + (spValue || '—') + ' <span style="font-size:11px;font-weight:500;color:var(--text-3);">SP</span></div>' +
+            '<div class="score-num">' + (spValue || '—') + ' <span style="font-size:10px;font-weight:500;color:var(--text-4);">SP</span></div>' +
             '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + spBarWidth + ';background:' + spColor + ';"></div></div>' +
           '</div>' +
         '</td>' +
@@ -309,9 +307,9 @@ const App = (() => {
     const lowConf   = sorted.filter(f => f.confidence === 'Low');
 
     const cards = [
-      { icon: '⚡', title: 'Quick Wins', text: quickWins.length > 0 ? quickWins.map(f => f.name).join(', ') + ' — high user impact with low engineering effort.' : 'No quick wins detected. Consider breaking down complex features.', tag: quickWins.length + ' features', tagBg: '#f0fdf4', tagColor: '#16a34a' },
-      { icon: '⚠', title: 'Risk Flags', text: highRisk.length > 0 ? highRisk.map(f => f.name).join(', ') + ' — these features carry high risk and need stakeholder review.' : 'No high-risk features detected.', tag: highRisk.length + ' features', tagBg: '#fef2f2', tagColor: '#dc2626' },
-      { icon: '🎯', title: 'Strategic Priorities', text: strategic.length > 0 ? strategic.map(f => f.name).join(', ') + ' — strong strategic alignment with your goals.' : 'Consider adding epics and labels to improve alignment scoring.', tag: strategic.length + ' features', tagBg: '#eff4ff', tagColor: '#2563eb' },
+      { icon: '⚡', title: 'Quick Wins', text: quickWins.length > 0 ? quickWins.map(f => f.name).join(', ') + ' — high impact with low engineering effort.' : 'No quick wins detected. Consider breaking down complex features.', tag: quickWins.length + ' features', tagBg: '#f0fdf4', tagColor: '#16a34a' },
+      { icon: '⚠', title: 'Risk Flags', text: highRisk.length > 0 ? highRisk.map(f => f.name).join(', ') + ' — carry high risk and need stakeholder review.' : 'No high-risk features detected.', tag: highRisk.length + ' features', tagBg: '#fef2f2', tagColor: '#dc2626' },
+      { icon: '🎯', title: 'Strategic Priorities', text: strategic.length > 0 ? strategic.map(f => f.name).join(', ') + ' — strong strategic alignment with your goals.' : 'Add epics and labels to improve alignment scoring.', tag: strategic.length + ' features', tagBg: '#eff4ff', tagColor: '#2563eb' },
       { icon: '🔍', title: 'Needs More Context', text: lowConf.length > 0 ? lowConf.map(f => f.name).join(', ') + ' — Claude had low confidence. Add descriptions and acceptance criteria.' : 'All features had sufficient context for confident scoring.', tag: lowConf.length + ' features', tagBg: '#fef3c7', tagColor: '#d97706' },
     ];
 
@@ -366,21 +364,15 @@ const App = (() => {
   // ── UI helpers ───────────────────────────────────────────────────────────
 
   function showWorkspaceState() {
-    document.getElementById('zeroState').style.display          = 'none';
-    document.getElementById('workspaceState').style.display     = 'flex';
+    document.getElementById('zeroState').style.display           = 'none';
+    document.getElementById('workspaceState').style.display      = 'flex';
     document.getElementById('workspaceState').style.flexDirection = 'column';
-    document.getElementById('workspaceState').style.flex        = '1';
-    document.getElementById('workspaceState').style.overflow    = 'hidden';
+    document.getElementById('workspaceState').style.flex         = '1';
+    document.getElementById('workspaceState').style.overflow     = 'hidden';
   }
 
   function setStep(n) {
-    for (let i = 1; i <= 4; i++) {
-      const el = document.getElementById('step' + i);
-      if (!el) continue;
-      el.classList.remove('active', 'done');
-      if (i < n) el.classList.add('done');
-      if (i === n) el.classList.add('active');
-    }
+    // Steps managed via leftnav status now
   }
 
   function exportCSV() {
@@ -394,25 +386,33 @@ const App = (() => {
     CSVHandler.reset();
     ChartRenderer.destroy();
 
-    document.getElementById('zeroState').style.display          = 'flex';
-    document.getElementById('workspaceState').style.display     = 'none';
-    document.getElementById('insightBanner').style.display      = 'none';
-    document.getElementById('whatsNext').style.display          = 'none';
-    document.getElementById('tableWrap').style.display          = 'none';
-    document.getElementById('skeletonLoader').style.display     = 'none';
-    document.getElementById('searchInput').value                = '';
-    document.getElementById('epicFilter').innerHTML             = '<option value="">All epics</option>';
-    document.getElementById('riskFilter').value                 = '';
-    document.getElementById('insightText').textContent          = '';
-
-    const clearBtn = document.getElementById('clearBtn');
-    if (clearBtn) clearBtn.style.display = 'none';
+    document.getElementById('zeroState').style.display           = 'flex';
+    document.getElementById('workspaceState').style.display      = 'none';
+    document.getElementById('insightBanner').style.display       = 'none';
+    document.getElementById('whatsNext').style.display           = 'none';
+    document.getElementById('tableWrap').style.display           = 'none';
+    document.getElementById('skeletonLoader').style.display      = 'none';
+    document.getElementById('searchInput').value                 = '';
+    document.getElementById('epicFilter').innerHTML              = '<option value="">All epics</option>';
+    document.getElementById('riskFilter').value                  = '';
+    document.getElementById('insightText').textContent           = '';
 
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'none';
 
+    const statusWrap = document.getElementById('leftnavStatus');
+    if (statusWrap) statusWrap.style.display = 'none';
+
+    // Lock nav items again
+    ['nav-matrix', 'nav-opportunities', 'nav-summary'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('disabled');
+        el.onclick = null;
+      }
+    });
+
     closeDrawer();
-    setStep(1);
 
     document.querySelectorAll('.view').forEach(v => { v.style.display = 'none'; v.classList.remove('active'); });
     document.querySelectorAll('.leftnav-item').forEach(i => i.classList.remove('active'));
@@ -423,16 +423,13 @@ const App = (() => {
 
     const statusDot  = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
-    if (statusDot)  statusDot.className      = 'status-dot';
-    if (statusText) statusText.textContent   = 'Ready to score.';
+    if (statusDot)  statusDot.className    = 'status-dot';
+    if (statusText) statusText.textContent = 'Ready to score.';
 
     showToast('Workspace cleared', 'info');
   }
 
-  function switchTab(tab, el) {
-    document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
-  }
+  function switchTab(tab, el) {}
 
   return {
     scoreFeatures,
