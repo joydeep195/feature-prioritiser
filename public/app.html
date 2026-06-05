@@ -39,27 +39,31 @@
 
   <aside class="leftnav">
     <nav class="leftnav-items">
-      <div class="leftnav-item active" id="nav-workspace" onclick="switchView('workspace',this)">
+      <div class="leftnav-item active" id="nav-workspace" onclick="window.switchView('workspace',this)">
         <span class="leftnav-icon">⊞</span><span class="leftnav-label">Analysis Workspace</span>
       </div>
-      <div class="leftnav-item" id="nav-matrix" onclick="switchView('matrix',this)">
+      <div class="leftnav-item" id="nav-matrix" onclick="window.switchView('matrix',this)">
         <span class="leftnav-icon">◎</span><span class="leftnav-label">Priority Matrix</span>
       </div>
-      <div class="leftnav-item" id="nav-opportunities" onclick="switchView('opportunities',this)">
+      <div class="leftnav-item" id="nav-opportunities" onclick="window.switchView('opportunities',this)">
         <span class="leftnav-icon">◈</span><span class="leftnav-label">Product Opportunities</span>
       </div>
-      <div class="leftnav-item" id="nav-summary" onclick="switchView('summary',this)">
+      <div class="leftnav-item" id="nav-summary" onclick="window.switchView('summary',this)">
         <span class="leftnav-icon">▤</span><span class="leftnav-label">Executive Summary</span>
       </div>
     </nav>
     <div class="leftnav-howto">
-      <div class="howto-title"><span>?</span> How it works</div>
+      <div class="howto-title">? How it works</div>
       <div class="howto-steps">
         <div class="howto-step active" id="step1"><div class="step-num">1</div><div class="step-text">Upload your JIRA CSV</div></div>
         <div class="howto-step" id="step2"><div class="step-num">2</div><div class="step-text">Set team priorities</div></div>
         <div class="howto-step" id="step3"><div class="step-num">3</div><div class="step-text">AI analyses backlog</div></div>
         <div class="howto-step" id="step4"><div class="step-num">4</div><div class="step-text">Make better decisions</div></div>
       </div>
+    </div>
+    <div class="leftnav-status">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText">Ready to score.</div>
     </div>
     <div class="leftnav-trust">
       <span class="trust-icon">🔒</span>
@@ -69,7 +73,6 @@
 
   <main class="main">
 
-    <!-- ZERO STATE -->
     <div id="view-workspace" class="view active">
       <div id="zeroState">
         <div class="zero-header">
@@ -99,7 +102,6 @@
         </div>
       </div>
 
-      <!-- WORKSPACE (shown after scoring) -->
       <div id="workspaceState" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
         <div class="workspace-header">
           <div class="workspace-header-left">
@@ -121,7 +123,7 @@
           </div>
           <div class="kpi-item">
             <div class="kpi-icon" style="background:#fef2f2;color:#dc2626;">↑</div>
-            <div class="kpi-data"><div class="kpi-label">High Priority</div><div class="kpi-value" id="kpiHighPriority">0</div><div class="kpi-sub" id="kpiHighPct">of total</div></div>
+            <div class="kpi-data"><div class="kpi-label">Must Ship</div><div class="kpi-value" id="kpiHighPriority">0</div><div class="kpi-sub" id="kpiHighPct">of total</div></div>
           </div>
           <div class="kpi-item">
             <div class="kpi-icon" style="background:#f0fdf4;color:#16a34a;">⚡</div>
@@ -178,8 +180,8 @@
                 <tr>
                   <th style="width:90px;">JIRA ID</th>
                   <th>Title</th>
-                  <th style="width:140px;">AI Score ↓</th>
-                  <th style="width:110px;">Priority</th>
+                  <th style="width:120px;">Effort</th>
+                  <th style="width:140px;">MoSCoW</th>
                   <th style="width:130px;">Confidence</th>
                   <th style="width:40px;"></th>
                 </tr>
@@ -202,7 +204,6 @@
       </div>
     </div>
 
-    <!-- PRIORITY MATRIX -->
     <div id="view-matrix" class="view" style="display:none; flex-direction:column;">
       <div class="workspace-header">
         <div class="workspace-header-left">
@@ -221,7 +222,6 @@
       </div>
     </div>
 
-    <!-- PRODUCT OPPORTUNITIES -->
     <div id="view-opportunities" class="view" style="display:none; flex-direction:column;">
       <div class="workspace-header">
         <div class="workspace-header-left">
@@ -232,7 +232,6 @@
       <div id="opportunitiesContent" class="opportunities-grid"></div>
     </div>
 
-    <!-- EXECUTIVE SUMMARY -->
     <div id="view-summary" class="view" style="display:none; flex-direction:column;">
       <div class="workspace-header">
         <div class="workspace-header-left">
@@ -248,7 +247,6 @@
 
   </main>
 
-  <!-- RIGHT DRAWER -->
   <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
   <div class="drawer" id="drawer">
     <div class="drawer-header">
@@ -265,7 +263,6 @@
 
 </div>
 
-<!-- PRIORITIES MODAL -->
 <div id="prioritiesModal" class="modal-overlay" style="display:none;">
   <div class="modal">
     <div class="modal-header">
@@ -283,7 +280,6 @@
   </div>
 </div>
 
-<!-- PRESENTATION OVERLAY -->
 <div class="present-overlay" id="presentOverlay">
   <div class="present-nav">
     <div class="present-logo">Feature<span>IQ</span></div>
@@ -294,9 +290,23 @@
     <div class="present-title">AI-Scored Feature Rankings</div>
     <div class="present-kpis" id="presentKpis"></div>
     <table class="present-table">
-      <thead><tr><th>#</th><th>Feature</th><th>JIRA</th><th class="y">Score</th><th class="y">Priority</th><th>Risk</th><th>Next Step</th><th>Rationale</th></tr></thead>
+      <thead><tr><th>#</th><th>Feature</th><th>JIRA</th><th class="y">MoSCoW</th><th class="y">Effort</th><th>Risk</th><th>Next Step</th><th>Rationale</th></tr></thead>
       <tbody id="presentBody"></tbody>
     </table>
+  </div>
+</div>
+
+<div id="loadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(8,17,42,0.6); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="background:#ffffff; border-radius:16px; padding:2.5rem 3rem; text-align:center; box-shadow:0 24px 48px rgba(8,17,42,0.3); min-width:320px;">
+    <div style="width:56px; height:56px; border:3px solid #e2e6f0; border-top-color:#f5c400; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 1.5rem;"></div>
+    <div style="font-size:13px; font-weight:600; color:#6b7a9a; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; font-family:'JetBrains Mono',monospace;">Analysing with Claude AI</div>
+    <div id="loadingFeatureName" style="font-size:16px; font-weight:700; color:#08112a; letter-spacing:-0.01em; margin-bottom:1.25rem; min-height:24px;"></div>
+    <div style="width:100%; height:6px; background:#e2e6f0; border-radius:3px; overflow:hidden; margin-bottom:0.75rem;">
+      <div id="loadingBar" style="height:100%; background:#f5c400; border-radius:3px; transition:width 0.5s ease; width:0%;"></div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6b7a9a;">
+      <span id="loadingCurrent">0</span> of <span id="loadingTotal">0</span> features
+    </div>
   </div>
 </div>
 
@@ -325,20 +335,22 @@ const DarkMode = (() => {
   return { toggle, init };
 })();
 
-function showToast(msg, type='info') {
+function showToast(msg, type) {
+  type = type || 'info';
   const c = document.getElementById('toastContainer');
   const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
-  t.innerHTML = `<span class="toast-icon">${{success:'✓',error:'✕',info:'•'}[type]||'•'}</span><span>${msg}</span>`;
+  t.className = 'toast toast-' + type;
+  const icons = { success: '✓', error: '✕', info: '•' };
+  t.innerHTML = '<span class="toast-icon">' + (icons[type] || '•') + '</span><span>' + msg + '</span>';
   c.appendChild(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 3000);
+  setTimeout(function() { t.classList.add('out'); setTimeout(function() { t.remove(); }, 300); }, 3000);
 }
 
 function switchView(view, el) {
-  document.querySelectorAll('.view').forEach(v => { v.style.display='none'; v.classList.remove('active'); });
-  document.querySelectorAll('.leftnav-item').forEach(i => i.classList.remove('active'));
-  const t = document.getElementById('view-'+view);
-  if (t) { t.style.display='flex'; t.classList.add('active'); }
+  document.querySelectorAll('.view').forEach(function(v) { v.style.display = 'none'; v.classList.remove('active'); });
+  document.querySelectorAll('.leftnav-item').forEach(function(i) { i.classList.remove('active'); });
+  const t = document.getElementById('view-' + view);
+  if (t) { t.style.display = 'flex'; t.classList.add('active'); }
   if (el) el.classList.add('active');
 }
 
@@ -346,7 +358,7 @@ function openDrawer(feature) {
   const meta = CSVHandler.getMeta()[feature.name] || {};
   document.getElementById('drawerJira').textContent = meta.jiraId || '—';
   document.getElementById('drawerName').textContent = feature.name;
-  document.querySelectorAll('.drawer-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('.drawer-tab').forEach(function(t, i) { t.classList.toggle('active', i === 0); });
   showDrawerTab('overview', feature, meta);
   document.getElementById('drawer').classList.add('open');
   document.getElementById('drawerOverlay').classList.add('active');
@@ -358,100 +370,106 @@ function closeDrawer() {
 }
 
 function switchDrawerTab(tab, el) {
-  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.drawer-tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
   const f = window._drawerFeature;
-  if (f) showDrawerTab(tab, f, CSVHandler.getMeta()[f.name]||{});
+  if (f) showDrawerTab(tab, f, CSVHandler.getMeta()[f.name] || {});
 }
 
 function showDrawerTab(tab, feature, meta) {
   window._drawerFeature = feature;
   const body = document.getElementById('drawerBody');
-  const cc = c => c==='High'?'#16a34a':c==='Medium'?'#d97706':'#dc2626';
-  const cw = c => c==='High'?'90%':c==='Medium'?'55%':'22%';
-  const rc = r => r==='Low'?'#16a34a':r==='Medium'?'#d97706':'#dc2626';
-  const rb = r => r==='Low'?'#f0fdf4':r==='Medium'?'#fef3c7':'#fef2f2';
-  const chipC = v => v>=7?'#16a34a':v>=4?'#d97706':'#dc2626';
-  const chipB = v => v>=7?'#f0fdf4':v>=4?'#fef3c7':'#fef2f2';
 
-  if (tab==='overview') {
-    body.innerHTML = `
-      <div class="drawer-section">
-        <div class="drawer-score-big">${feature.score}</div>
-        <div class="drawer-score-label">AI Priority Score</div>
-        <div class="drawer-score-bar"><div style="width:${Math.min(parseFloat(feature.score)/1.5,100)}%;height:100%;background:var(--yellow);border-radius:3px;transition:width 0.6s ease;"></div></div>
-      </div>
-      <div class="drawer-section">
-        <div class="drawer-metrics">
-          ${['impact','effort','alignment'].map(dim => `
-          <div class="drawer-metric">
-            <div class="dm-label">${dim.charAt(0).toUpperCase()+dim.slice(1)}</div>
-            <div class="dm-val" style="color:${dim==='effort'?chipC(10-feature[dim]):chipC(feature[dim])}">${feature[dim]}<span>/10</span></div>
-            <div class="dm-bar"><div style="width:${feature[dim]*10}%;background:${dim==='effort'?chipC(10-feature[dim]):chipC(feature[dim])};height:100%;border-radius:2px;transition:width 0.5s ease;"></div></div>
-          </div>`).join('')}
-        </div>
-      </div>
-      <div class="drawer-section">
-        <div class="drawer-row"><div class="dr-label">Risk</div>
-          <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:${rb(feature.risk||'Low')};color:${rc(feature.risk||'Low')};font-family:var(--mono);text-transform:uppercase;letter-spacing:0.04em;">${feature.risk||'Low'}</span>
-        </div>
-        <div class="drawer-row"><div class="dr-label">Confidence</div>
-          <div style="display:flex;flex-direction:column;gap:3px;">
-            <div style="width:100px;height:4px;background:var(--gray-2);border-radius:2px;overflow:hidden;"><div style="width:${cw(feature.confidence||'Medium')};height:100%;background:${cc(feature.confidence||'Medium')};border-radius:2px;"></div></div>
-            <div style="font-size:10px;font-weight:600;color:${cc(feature.confidence||'Medium')};font-family:var(--mono);text-transform:uppercase;">${feature.confidence||'Medium'}</div>
-          </div>
-        </div>
-      </div>
-      <div class="drawer-section">
-        <div class="dr-label" style="margin-bottom:6px;">Next Step</div>
-        <div class="drawer-next">${feature.nextStep||'—'}</div>
-      </div>
-      ${meta.jiraId?`<button class="view-in-jira" onclick="showToast('Opening in JIRA...','info')">View in Jira ↗</button>`:''}
-    `;
-  } else if (tab==='details') {
-    const rows = [
-      ['Epic', meta.epic],['JIRA Priority', meta.priority],
-      ['Story Points', meta.storyPoints ? meta.storyPoints+' SP' : null],
-      ['Labels', meta.labels],
-    ].filter(r=>r[1]);
-    body.innerHTML = `
-      <div class="drawer-section">${rows.map(r=>`<div class="drawer-row"><div class="dr-label">${r[0]}</div><span class="detail-tag">${r[1]}</span></div>`).join('') || '<div style="color:var(--text-3);font-size:12px;">No additional details in CSV.</div>'}</div>
-      ${meta.description?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Description</div><div class="drawer-desc">${meta.description}</div></div>`:''}
-      ${meta.acceptanceCriteria?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Acceptance Criteria</div><div class="drawer-desc">${meta.acceptanceCriteria}</div></div>`:''}
-      ${meta.notes?`<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Notes</div><div class="drawer-desc">${meta.notes}</div></div>`:''}
-    `;
+  function cc(c) { return c === 'High' ? '#16a34a' : c === 'Medium' ? '#d97706' : '#dc2626'; }
+  function cw(c) { return c === 'High' ? '90%' : c === 'Medium' ? '55%' : '22%'; }
+  function rc(r) { return r === 'Low' ? '#16a34a' : r === 'Medium' ? '#d97706' : '#dc2626'; }
+  function rb(r) { return r === 'Low' ? '#f0fdf4' : r === 'Medium' ? '#fef3c7' : '#fef2f2'; }
+  function chipC(v) { return v >= 7 ? '#16a34a' : v >= 4 ? '#d97706' : '#dc2626'; }
+
+  if (tab === 'overview') {
+    const mColor  = getMoSCoWColor(feature);
+    const mLabel  = getMoSCoWLabel(feature);
+    const mReason = getMoSCoWReason(feature);
+    const conf    = feature.confidence || 'Medium';
+    const risk    = feature.risk || 'Low';
+
+    body.innerHTML =
+      '<div class="drawer-section">' +
+        '<div class="drawer-score-big" style="font-size:22px;color:' + mColor + ';">' + mLabel + '</div>' +
+        '<div class="drawer-score-label" style="margin-bottom:6px;">MoSCoW Priority</div>' +
+        '<div style="font-size:11px;color:var(--text-3);line-height:1.6;background:var(--gray-1);padding:8px 10px;border-radius:6px;font-family:var(--mono);">' + mReason + '</div>' +
+      '</div>' +
+      '<div class="drawer-section"><div class="drawer-metrics">' +
+        ['impact', 'effort', 'alignment'].map(function(dim) {
+          var val   = feature[dim] || 0;
+          var color = dim === 'effort' ? chipC(10 - val) : chipC(val);
+          return '<div class="drawer-metric">' +
+            '<div class="dm-label">' + dim.charAt(0).toUpperCase() + dim.slice(1) + '</div>' +
+            '<div class="dm-val" style="color:' + color + '">' + val + '<span>/10</span></div>' +
+            '<div class="dm-bar"><div style="width:' + (val * 10) + '%;background:' + color + ';height:100%;border-radius:2px;transition:width 0.5s ease;"></div></div>' +
+          '</div>';
+        }).join('') +
+      '</div></div>' +
+      '<div class="drawer-section">' +
+        '<div class="drawer-row"><div class="dr-label">Risk</div>' +
+          '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;background:' + rb(risk) + ';color:' + rc(risk) + ';font-family:var(--mono);text-transform:uppercase;letter-spacing:0.04em;">' + risk + '</span>' +
+        '</div>' +
+        '<div class="drawer-row"><div class="dr-label">Confidence</div>' +
+          '<div style="display:flex;flex-direction:column;gap:3px;">' +
+            '<div style="width:100px;height:4px;background:var(--gray-2);border-radius:2px;overflow:hidden;"><div style="width:' + cw(conf) + ';height:100%;background:' + cc(conf) + ';border-radius:2px;"></div></div>' +
+            '<div style="font-size:10px;font-weight:600;color:' + cc(conf) + ';font-family:var(--mono);text-transform:uppercase;">' + conf + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="drawer-section">' +
+        '<div class="dr-label" style="margin-bottom:6px;">Next Step</div>' +
+        '<div class="drawer-next">' + (feature.nextStep || '—') + '</div>' +
+      '</div>' +
+      (meta.jiraId ? '<button class="view-in-jira" onclick="showToast(\'Opening in JIRA...\',\'info\')">View in Jira ↗</button>' : '');
+
+  } else if (tab === 'details') {
+    var rows = [
+      ['Epic', meta.epic],
+      ['JIRA Priority', meta.priority],
+      ['Story Points', meta.storyPoints ? meta.storyPoints + ' SP' : null],
+      ['Labels', meta.labels]
+    ].filter(function(r) { return r[1]; });
+
+    body.innerHTML =
+      '<div class="drawer-section">' +
+        (rows.length ? rows.map(function(r) { return '<div class="drawer-row"><div class="dr-label">' + r[0] + '</div><span class="detail-tag">' + r[1] + '</span></div>'; }).join('') : '<div style="color:var(--text-3);font-size:12px;">No additional details in CSV.</div>') +
+      '</div>' +
+      (meta.description ? '<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Description</div><div class="drawer-desc">' + meta.description + '</div></div>' : '') +
+      (meta.acceptanceCriteria ? '<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Acceptance Criteria</div><div class="drawer-desc">' + meta.acceptanceCriteria + '</div></div>' : '') +
+      (meta.notes ? '<div class="drawer-section"><div class="dr-label" style="margin-bottom:6px;">Notes</div><div class="drawer-desc">' + meta.notes + '</div></div>' : '');
+
   } else {
-    body.innerHTML = `
-      <div class="drawer-section">
-        <div class="ai-reasoning-title">✦ AI Reasoning</div>
-        <div class="ai-reasoning-text">${feature.rationale}</div>
-      </div>
-      <div class="drawer-section">
-        <div class="dr-label" style="margin-bottom:8px;">Key Signals</div>
-        <div class="signals-list">
-          <div class="signal-item"><span class="signal-dot" style="background:#f5c400;"></span>Impact score based on ${meta.description?'user story and acceptance criteria':'feature description'}</div>
-          <div class="signal-item"><span class="signal-dot" style="background:#2563eb;"></span>Effort score ${meta.storyPoints?`informed by ${meta.storyPoints} story points`:'estimated from scope description'}</div>
-          <div class="signal-item"><span class="signal-dot" style="background:#16a34a;"></span>Alignment score based on ${meta.epic?`epic: ${meta.epic}`:'feature context'}</div>
-          ${feature.risk==='High'?`<div class="signal-item"><span class="signal-dot" style="background:#dc2626;"></span>High risk: review dependencies before committing</div>`:''}
-        </div>
-      </div>
-    `;
+    body.innerHTML =
+      '<div class="drawer-section">' +
+        '<div class="ai-reasoning-title">✦ AI Reasoning</div>' +
+        '<div class="ai-reasoning-text">' + (feature.rationale || '—') + '</div>' +
+      '</div>' +
+      '<div class="drawer-section">' +
+        '<div class="dr-label" style="margin-bottom:8px;">Key Signals</div>' +
+        '<div class="signals-list">' +
+          '<div class="signal-item"><span class="signal-dot" style="background:#f5c400;"></span>Impact score based on ' + (meta.description ? 'user story and acceptance criteria' : 'feature description') + '</div>' +
+          '<div class="signal-item"><span class="signal-dot" style="background:#2563eb;"></span>Effort score ' + (meta.storyPoints ? 'informed by ' + meta.storyPoints + ' story points' : 'estimated from scope description') + '</div>' +
+          '<div class="signal-item"><span class="signal-dot" style="background:#16a34a;"></span>Alignment score based on ' + (meta.epic ? 'epic: ' + meta.epic : 'feature context') + '</div>' +
+          (feature.risk === 'High' ? '<div class="signal-item"><span class="signal-dot" style="background:#dc2626;"></span>High risk: review dependencies before committing</div>' : '') +
+        '</div>' +
+      '</div>';
   }
 }
 
 function openPrioritiesModal() {
-  const priorities = ['Maximise user impact','Minimise engineering effort','Align with company strategy','Focus on quick wins','Prioritise compliance and security','Support enterprise and B2B growth'];
-  const grid = document.getElementById('modalPriorities');
-  grid.innerHTML = priorities.map(p => `
-    <label class="modal-priority-item">
-      <input type="checkbox" class="priority-checkbox" value="${p}">
-      <span class="modal-p-check"></span>
-      <span class="modal-p-label">${p}</span>
-    </label>
-  `).join('');
-  grid.querySelectorAll('.modal-priority-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const cb = item.querySelector('input');
+  var priorities = ['Maximise user impact', 'Minimise engineering effort', 'Align with company strategy', 'Focus on quick wins', 'Prioritise compliance and security', 'Support enterprise and B2B growth'];
+  var grid = document.getElementById('modalPriorities');
+  grid.innerHTML = priorities.map(function(p) {
+    return '<label class="modal-priority-item"><input type="checkbox" class="priority-checkbox" value="' + p + '"><span class="modal-p-check"></span><span class="modal-p-label">' + p + '</span></label>';
+  }).join('');
+  grid.querySelectorAll('.modal-priority-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      var cb = item.querySelector('input');
       cb.checked = !cb.checked;
       item.classList.toggle('checked', cb.checked);
       item.querySelector('.modal-p-check').textContent = cb.checked ? '✓' : '';
@@ -470,29 +488,29 @@ function runFromModal() {
 }
 
 function handleAISearch(e) {
-  if (e.key==='Enter') {
-    showToast('AI search coming in v2 — great idea though!', 'info');
+  if (e.key === 'Enter') {
+    showToast('AI search coming in v2!', 'info');
     e.target.value = '';
   }
 }
 
-function exportCSV() { App.exportCSV(); }
-
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   DarkMode.init();
-  document.getElementById('csvInput').addEventListener('change', e => {
-    const file = e.target.files[0];
+  document.getElementById('csvInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
     if (file) App.handleFile(file);
   });
-  const uz = document.getElementById('uploadZone');
-  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
-  uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
-  uz.addEventListener('drop', e => {
-    e.preventDefault(); uz.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
+  var uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover', function(e) { e.preventDefault(); uz.classList.add('dragover'); });
+  uz.addEventListener('dragleave', function() { uz.classList.remove('dragover'); });
+  uz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uz.classList.remove('dragover');
+    var file = e.dataTransfer.files[0];
     if (file && file.name.endsWith('.csv')) App.handleFile(file);
   });
 });
 </script>
+
 </body>
 </html>
