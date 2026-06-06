@@ -107,41 +107,19 @@
           <div class="ws-header-left">
             <div class="ws-eyebrow">Analysis Workspace</div>
             <h1 class="ws-title">Backlog Analysis <span class="ws-badge">✓</span></h1>
-            <p class="ws-sub" id="workspaceSub"></p>
+            <div class="ws-stats">
+              <span id="kpiCount">0</span> features scored
+              <span class="ws-stats-dot">·</span>
+              <span id="kpiQuickWins">0</span> quick wins
+              <span class="ws-stats-dot">·</span>
+              <span id="kpiHighRisk">0</span> high risk
+            </div>
           </div>
           <div class="ws-header-right">
-            <button class="ws-btn ghost" onclick="openPrioritiesModal()">⚙ Re-run</button>
-            <button class="ws-btn ghost" onclick="App.exportCSV()">↓ Export CSV</button>
+            <button class="ws-btn ghost" onclick="openPrioritiesModal()">↺ Re-run</button>
+            <button class="ws-btn ghost" onclick="App.exportCSV()">↓ Export</button>
             <button class="ws-btn primary" onclick="PresentationMode.open()">▶ Present</button>
-            <button class="ws-btn danger" onclick="App.clearAll()">✕ Clear</button>
-          </div>
-        </div>
-
-        <div class="kpi-bar">
-          <div class="kpi-item kpi-primary">
-            <div class="kpi-label">Total Features</div>
-            <div class="kpi-value" id="kpiCount">0</div>
-            <div class="kpi-sub">analysed</div>
-          </div>
-          <div class="kpi-item">
-            <div class="kpi-label">Must Ship</div>
-            <div class="kpi-value" id="kpiHighPriority">0</div>
-            <div class="kpi-sub" id="kpiHighPct">of total</div>
-          </div>
-          <div class="kpi-item">
-            <div class="kpi-label">Quick Wins</div>
-            <div class="kpi-value" id="kpiQuickWins">0</div>
-            <div class="kpi-sub">high impact, low effort</div>
-          </div>
-          <div class="kpi-item">
-            <div class="kpi-label">Avg Confidence</div>
-            <div class="kpi-value" id="kpiConfidence">0%</div>
-            <div class="kpi-sub">overall</div>
-          </div>
-          <div class="kpi-item">
-            <div class="kpi-label">High Risk</div>
-            <div class="kpi-value" id="kpiHighRisk">0</div>
-            <div class="kpi-sub">need attention</div>
+            <button class="ws-btn danger" onclick="App.clearAll()">Clear</button>
           </div>
         </div>
 

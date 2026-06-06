@@ -207,15 +207,9 @@ const App = (() => {
     const highConf  = sorted.filter(f => f.confidence === 'High').length;
     const confPct   = Math.round((highConf / sorted.length) * 100);
 
-    document.getElementById('kpiCount').textContent        = sorted.length;
-    document.getElementById('kpiHighPriority').textContent = mustShip;
-    document.getElementById('kpiHighPct').textContent      = Math.round((mustShip / sorted.length) * 100) + '% of total';
-    document.getElementById('kpiQuickWins').textContent    = quickWins;
-    document.getElementById('kpiConfidence').textContent   = confPct + '%';
-    document.getElementById('kpiHighRisk').textContent     = highRisk;
-
-    const sub = document.getElementById('workspaceSub');
-    if (sub) sub.textContent = 'AI has analysed ' + Object.keys(csvMeta).length + ' features from your JIRA backlog';
+    document.getElementById('kpiCount').textContent     = sorted.length;
+document.getElementById('kpiQuickWins').textContent  = quickWins;
+document.getElementById('kpiHighRisk').textContent   = highRisk;
   }
 
   function buildInsight(sorted) {
