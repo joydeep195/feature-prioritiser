@@ -15,11 +15,6 @@ function getMoSCoWLabel(feature) {
   return map[getMoSCoW(feature)];
 }
 
-function getMoSCoWColor(feature) {
-  var map = { must: '#0a6b4a', should: '#444', could: '#888', wont: '#bbb' };
-  return map[getMoSCoW(feature)];
-}
-
 function getMoSCoWDotClass(feature) {
   var map = { must: 'moscow-dot moscow-dot-must', should: 'moscow-dot moscow-dot-should', could: 'moscow-dot moscow-dot-could', wont: 'moscow-dot moscow-dot-wont' };
   return map[getMoSCoW(feature)];
@@ -72,7 +67,7 @@ const App = (() => {
     const additionalContext = getAdditionalContext();
 
     showWorkspaceState();
-    showSkeleton(features.length);
+    document.getElementById('tableWrap').style.display = 'none';
     startLoadingCounter(features.length);
 
     try {
@@ -89,38 +84,20 @@ const App = (() => {
       if (data.error) throw new Error(data.error);
 
       scoredData = data.results.map(f => ({ ...f, score: computeScore(f) }));
-      hideSkeleton();
+      finishLoading();
       renderAll();
       unlockNav();
       showToast(scoredData.length + ' features scored successfully', 'success');
 
     } catch (err) {
-      hideSkeleton();
+      finishLoading();
       showToast('Scoring failed: ' + err.message, 'error');
       console.error(err);
     }
   }
 
-  function showSkeleton(count) {
-    document.getElementById('tableWrap').style.display      = 'none';
-    document.getElementById('skeletonLoader').style.display = 'block';
-    const rows = document.getElementById('skeletonRows');
-    rows.innerHTML = Array.from({ length: Math.min(count, 6) }).map((_, i) => `
-      <div class="skel-row" style="animation-delay:${i*0.1}s;">
-        <div class="skel-block" style="width:65px;height:12px;"></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
-          <div class="skel-block" style="width:${160+i*20}px;height:13px;"></div>
-        </div>
-        <div class="skel-block" style="width:120px;height:24px;border-radius:4px;"></div>
-        <div class="skel-block" style="width:90px;height:18px;border-radius:4px;"></div>
-        <div class="skel-block" style="width:80px;height:14px;"></div>
-      </div>
-    `).join('');
-  }
-
-  function hideSkeleton() {
-    document.getElementById('skeletonLoader').style.display  = 'none';
-    document.getElementById('tableWrap').style.display       = 'block';
+  function finishLoading() {
+    document.getElementById('tableWrap').style.display = 'block';
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'none';
     if (window._loadingInterval) { clearInterval(window._loadingInterval); window._loadingInterval = null; }
@@ -231,7 +208,7 @@ const App = (() => {
     const csvMeta  = CSVHandler.getMeta();
     window._tableFeatures = filtered;
 
-    const confColor = c => c === 'High' ? '#0a6b4a' : c === 'Medium' ? '#d97706' : '#dc2626';
+    const confColor = c => c === 'High' ? 'var(--accent)' : c === 'Medium' ? 'var(--warn)' : 'var(--danger)';
     const confWidth = c => c === 'High' ? '90%'     : c === 'Medium' ? '55%'     : '22%';
 
     document.getElementById('tableBody').innerHTML = filtered.map((f, i) => {
@@ -244,21 +221,20 @@ const App = (() => {
       const effortPct = Math.min((clampNumber(spValue || f.effort, 0, 21) / 21) * 100, 100) + '%';
       const mLabel    = getMoSCoWLabel(f);
       const mDotClass = getMoSCoWDotClass(f);
-      const mColor    = getMoSCoWColor(f);
 
       return '<tr onclick="openDrawer(window._tableFeatures[' + i + '])">' +
         '<td><div class="row-jira" title="' + esc(jira) + '">' + esc(jira) + '</div></td>' +
         '<td><div class="row-title" title="' + esc(f.name) + '">' + esc(f.name) + '</div></td>' +
         '<td>' +
           '<div class="ie-cell">' +
-            '<div class="ie-row"><span class="ie-label">IMP</span><div class="ie-bar-track"><div class="ie-bar-fill" style="width:' + impactPct + ';background:#0a6b4a;"></div></div><span class="ie-val">' + (f.impact || '-') + '</span></div>' +
-            '<div class="ie-row"><span class="ie-label">EFF</span><div class="ie-bar-track"><div class="ie-bar-fill" style="width:' + effortPct + ';background:#94a3b8;"></div></div><span class="ie-val">' + (spValue || f.effort || '-') + '<span class="ie-unit">' + (spValue ? ' SP' : '') + '</span></span></div>' +
+            '<div class="ie-row"><span class="ie-label">IMP</span><div class="ie-bar-track"><div class="ie-bar-fill" style="width:' + impactPct + ';background:var(--accent);"></div></div><span class="ie-val">' + (f.impact || '-') + '</span></div>' +
+            '<div class="ie-row"><span class="ie-label">EFF</span><div class="ie-bar-track"><div class="ie-bar-fill" style="width:' + effortPct + ';background:var(--text-4);"></div></div><span class="ie-val">' + (spValue || f.effort || '-') + '<span class="ie-unit">' + (spValue ? ' SP' : '') + '</span></span></div>' +
           '</div>' +
         '</td>' +
         '<td>' +
           '<div class="moscow-cell">' +
             '<div class="' + mDotClass + '"></div>' +
-            '<span class="moscow-text" style="color:' + mColor + ';">' + mLabel.toUpperCase() + '</span>' +
+            '<span class="moscow-text">' + mLabel.toUpperCase() + '</span>' +
           '</div>' +
         '</td>' +
         '<td>' +
@@ -291,14 +267,15 @@ const App = (() => {
     const highRisk  = sorted.filter(f => f.risk === 'High');
     const strategic = sorted.filter(f => f.alignment >= 8);
     const lowConf   = sorted.filter(f => f.confidence === 'Low');
+    const svgIcon = path => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>';
     const cards = [
-      { icon: '!', title: 'Quick Wins', text: quickWins.length > 0 ? quickWins.map(f => f.name).join(', ') + ' - high impact with low engineering effort.' : 'No quick wins detected.', tag: pluralize(quickWins.length, 'feature'), tagBg: '#e8f5f0', tagColor: '#0a6b4a' },
-      { icon: '!', title: 'Risk Flags', text: highRisk.length > 0 ? highRisk.map(f => f.name).join(', ') + ' - need stakeholder review.' : 'No high-risk features detected.', tag: pluralize(highRisk.length, 'feature'), tagBg: '#fef2f2', tagColor: '#dc2626' },
-      { icon: '*', title: 'Strategic Priorities', text: strategic.length > 0 ? strategic.map(f => f.name).join(', ') + ' - strong strategic alignment.' : 'Add epics and labels to improve alignment scoring.', tag: pluralize(strategic.length, 'feature'), tagBg: '#eff4ff', tagColor: '#2563eb' },
-      { icon: '?', title: 'Needs More Context', text: lowConf.length > 0 ? lowConf.map(f => f.name).join(', ') + ' - add descriptions and acceptance criteria.' : 'All features had sufficient context.', tag: pluralize(lowConf.length, 'feature'), tagBg: '#fef3c7', tagColor: '#d97706' },
+      { icon: svgIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'), title: 'Quick Wins', text: quickWins.length > 0 ? quickWins.map(f => f.name).join(', ') + ' - high impact with low engineering effort.' : 'No quick wins detected.', tag: pluralize(quickWins.length, 'feature'), tagBg: 'var(--accent-soft)', tagColor: 'var(--accent)' },
+      { icon: svgIcon('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'), title: 'Risk Flags', text: highRisk.length > 0 ? highRisk.map(f => f.name).join(', ') + ' - need stakeholder review.' : 'No high-risk features detected.', tag: pluralize(highRisk.length, 'feature'), tagBg: 'var(--danger-soft)', tagColor: 'var(--danger)' },
+      { icon: svgIcon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'), title: 'Strategic Priorities', text: strategic.length > 0 ? strategic.map(f => f.name).join(', ') + ' - strong strategic alignment.' : 'Add epics and labels to improve alignment scoring.', tag: pluralize(strategic.length, 'feature'), tagBg: 'var(--info-soft)', tagColor: 'var(--info)' },
+      { icon: svgIcon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'), title: 'Needs More Context', text: lowConf.length > 0 ? lowConf.map(f => f.name).join(', ') + ' - add descriptions and acceptance criteria.' : 'All features had sufficient context.', tag: pluralize(lowConf.length, 'feature'), tagBg: 'var(--warn-soft)', tagColor: 'var(--warn)' },
     ];
     document.getElementById('opportunitiesContent').innerHTML = cards.map(c =>
-      '<div class="opp-card"><div class="opp-card-icon">'+esc(c.icon)+'</div><div class="opp-card-title">'+esc(c.title)+'</div><div class="opp-card-text">'+esc(c.text)+'</div><span class="opp-card-tag" style="background:'+c.tagBg+';color:'+c.tagColor+';">'+esc(c.tag)+'</span></div>'
+      '<div class="opp-card"><div class="opp-card-icon" style="color:'+c.tagColor+';">'+c.icon+'</div><div class="opp-card-title">'+esc(c.title)+'</div><div class="opp-card-text">'+esc(c.text)+'</div><span class="opp-card-tag" style="background:'+c.tagBg+';color:'+c.tagColor+';">'+esc(c.tag)+'</span></div>'
     ).join('');
   }
 
@@ -337,7 +314,6 @@ const App = (() => {
     document.getElementById('workspaceState').style.display     = 'none';
     document.getElementById('insightBanner').style.display      = 'none';
     document.getElementById('tableWrap').style.display          = 'none';
-    document.getElementById('skeletonLoader').style.display     = 'none';
     document.getElementById('searchInput').value                = '';
     document.getElementById('epicFilter').innerHTML             = '<option value="">All epics</option>';
     document.getElementById('riskFilter').value                 = '';
