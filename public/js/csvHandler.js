@@ -1,43 +1,138 @@
-const CSVHandler = (() => {
+﻿const CSVHandler = (() => {
   let csvMeta = {};
 
   function getMeta() { return csvMeta; }
 
   function reset() { csvMeta = {}; }
 
+  function parseCSVText(text) {
+    if (typeof text !== 'string') {
+      throw new Error('CSV content must be a string.');
+    }
+
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/^\uFEFF/, '');
+
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+
+      if (char === '"') {
+        if (inQuotes && text[i + 1] === '"') {
+          cell += '"';
+          i += 1;
+          continue;
+        }
+        inQuotes = !inQuotes;
+        continue;
+      }
+
+      if (!inQuotes && char === ',') {
+        row.push(cell);
+        cell = '';
+        continue;
+      }
+
+      if (!inQuotes && char === '\n') {
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = '';
+        continue;
+      }
+
+      cell += char;
+    }
+
+    if (inQuotes) {
+      throw new Error('Malformed CSV: missing closing quotation mark.');
+    }
+
+    if (cell !== '' || row.length) {
+      row.push(cell);
+      rows.push(row);
+    }
+
+    return rows.filter(row => row.some(cell => cell.trim() !== ''));
+  }
+
+  function getHeaderMap(headers) {
+    const normalized = headers.map(cell => cell.trim().toLowerCase());
+    const findIndex = names => normalized.findIndex(cell => names.includes(cell));
+
+    return {
+      jiraId: findIndex(['jira_id', 'jira id', 'issue key', 'key', 'jira', 'id']),
+      name: findIndex(['feature name', 'summary', 'name', 'title']),
+      notes: findIndex(['notes', 'comment', 'comments']),
+      description: findIndex(['description', 'details']),
+      acceptanceCriteria: findIndex(['acceptance criteria', 'acceptance', 'criteria']),
+      storyPoints: findIndex(['story points', 'storypoints', 'story point', 'estimate', 'estimates']),
+      epic: findIndex(['epic', 'epic name', 'epic link']),
+      priority: findIndex(['priority', 'jira priority']),
+      labels: findIndex(['labels', 'tags'])
+    };
+  }
+
+  function getValue(parts, index) {
+    return index >= 0 && index < parts.length ? parts[index].trim() : '';
+  }
+
+  function parseText(text) {
+    const rows = parseCSVText(text);
+    if (rows.length === 0) {
+      throw new Error('Empty CSV content.');
+    }
+
+    const headerRow = rows[0].map(cell => cell.trim());
+    const hasHeader = headerRow.some(cell => /jira|feature|summary|description|acceptance|story\s*points|epic|priority|label|notes/i.test(cell));
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const headerMap = hasHeader ? getHeaderMap(headerRow) : {
+      jiraId: 0,
+      name: 1,
+      notes: 2,
+      description: 3,
+      acceptanceCriteria: 4,
+      storyPoints: 5,
+      epic: 6,
+      priority: 7,
+      labels: 8
+    };
+
+    const meta = {};
+    let count = 0;
+
+    dataRows.forEach(parts => {
+      const name = getValue(parts, headerMap.name);
+      if (!name) {
+        return;
+      }
+
+      meta[name] = {
+        jiraId: getValue(parts, headerMap.jiraId),
+        notes: getValue(parts, headerMap.notes),
+        description: getValue(parts, headerMap.description),
+        acceptanceCriteria: getValue(parts, headerMap.acceptanceCriteria),
+        storyPoints: getValue(parts, headerMap.storyPoints),
+        epic: getValue(parts, headerMap.epic),
+        priority: getValue(parts, headerMap.priority),
+        labels: getValue(parts, headerMap.labels)
+      };
+      count += 1;
+    });
+
+    return { count, meta };
+  }
+
   function parse(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = e => {
         try {
-          const lines = e.target.result.split('\n').filter(l => l.trim());
-          if (lines.length === 0) return reject('Empty file.');
-
-          const headerLine = lines[0].toLowerCase();
-          const hasHeader = headerLine.includes('jira') || headerLine.includes('feature') || headerLine.includes('summary');
-          const startIdx = hasHeader ? 1 : 0;
-
-          csvMeta = {};
-          let count = 0;
-
-          lines.slice(startIdx).forEach(line => {
-            const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
-            const jiraId             = parts[0] || '';
-            const name               = parts[1] || '';
-            const notes              = parts[2] || '';
-            const description        = parts[3] || '';
-            const acceptanceCriteria = parts[4] || '';
-            const storyPoints        = parts[5] || '';
-            const epic               = parts[6] || '';
-            const priority           = parts[7] || '';
-            const labels             = parts[8] || '';
-
-            if (name) {
-              csvMeta[name] = { jiraId, notes, description, acceptanceCriteria, storyPoints, epic, priority, labels };
-              count++;
-            }
-          });
-
+          const { count, meta } = parseText(e.target.result);
+          csvMeta = meta;
           resolve({ count, fileName: file.name });
         } catch (err) {
           reject(err.message);
@@ -58,13 +153,18 @@ const CSVHandler = (() => {
       'PROJ-105,In-app push notifications,Marketing re-engagement blocked,As a user I want to receive relevant in-app alerts,"Permission prompt on first login, notification centre, mark as read",13,Engagement,Medium,"engagement,marketing"',
       'PROJ-106,Advanced search and filters,Top enterprise request,As a power user I want to filter results by multiple criteria,"Filter by date, status, owner, tag. Filters persist. Results update instantly",8,Search,High,"enterprise,power-users"',
       'PROJ-107,Two-factor authentication,Compliance requirement,As an admin I want to enforce 2FA for security compliance,"TOTP support, SMS fallback, recovery codes, admin enforcement toggle",5,Security,Critical,"security,compliance"',
-      'PROJ-108,API access for developers,5 partner integrations waiting,As a developer I want a REST API to integrate with internal tools,"API key management, rate limiting, full CRUD on core entities, docs",21,Platform,High,"api,partnerships"',
+      'PROJ-108,API access for developers,5 partner integrations waiting,As a developer I want a REST API to integrate with internal tools,"API key management, rate limiting, full CRUD on core entities, docs",21,Platform,High,"api,partnerships"'
     ].join('\n');
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([sample], { type: 'text/csv' }));
     a.download = 'sample-backlog-rich.csv';
     a.click();
   }
 
-  return { getMeta, reset, parse, downloadSample };
+  return { getMeta, reset, parse, downloadSample, parseCSVText, parseText };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CSVHandler;
+}

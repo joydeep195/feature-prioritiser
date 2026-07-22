@@ -25,7 +25,7 @@ const PresentationMode = (() => {
       <div class="present-kpi">
         <div class="present-kpi-label">Top score</div>
         <div class="present-kpi-value">${_sorted[0].score}</div>
-        <div class="present-kpi-sub">${_sorted[0].name.length > 16 ? _sorted[0].name.slice(0,16)+'…' : _sorted[0].name}</div>
+        <div class="present-kpi-sub">${esc(_sorted[0].name.length > 16 ? _sorted[0].name.slice(0,16)+'...' : _sorted[0].name)}</div>
       </div>
       <div class="present-kpi">
         <div class="present-kpi-label">Avg. user impact</div>
@@ -42,7 +42,7 @@ const PresentationMode = (() => {
     // Table
     document.getElementById('presentBody').innerHTML = _sorted.map((f, i) => {
       const meta = csvMeta[f.name] || {};
-      const jira = meta.jiraId || '—';
+      const jira = meta.jiraId || '-';
       const risk = f.risk || 'Low';
       const riskColor = risk === 'High' ? '#ef4444' : risk === 'Medium' ? '#f59e0b' : '#10b981';
 
@@ -55,7 +55,7 @@ const PresentationMode = (() => {
         <td style="font-family:var(--mono);">${f.alignment}</td>
         <td style="font-family:var(--mono); font-weight:700; color:#f5c400;">${f.score}</td>
         <td style="font-family:var(--mono); font-size:10px; font-weight:600; color:${riskColor}; text-transform:uppercase;">${risk}</td>
-        <td style="font-size:11px; color:rgba(255,255,255,0.5); max-width:160px;">${esc(f.nextStep || '—')}</td>
+        <td style="font-size:11px; color:rgba(255,255,255,0.5); max-width:160px;">${esc(f.nextStep || '-')}</td>
         <td style="font-size:11px; color:rgba(255,255,255,0.4); max-width:200px;">${esc(f.rationale)}</td>
       </tr>`;
     }).join('');

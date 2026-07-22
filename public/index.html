@@ -1,341 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FeatureIQ — Enterprise Feature Prioritisation</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --emerald:    #0a6b4a;
-      --emerald-2:  #0d8a5e;
-      --emerald-3:  #e8f5f0;
-      --off-white:  #f5f4f0;
-      --white:      #ffffff;
-      --text:       #1a1a1a;
-      --text-3:     #555555;
-      --border:     #e5e5e0;
-      --font-serif: 'Lora', Georgia, serif;
-      --font-sans:  'Inter', sans-serif;
-      --font-mono:  'JetBrains Mono', monospace;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: var(--off-white);
-      font-family: var(--font-sans);
-      color: var(--text);
-    }
-
-    body {
-      display: grid;
-      grid-template-rows: 52px 1fr 44px;
-      min-height: 100vh;
-      border-top: 3px solid var(--emerald);
-    }
-
-    /* NAV */
-    nav {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 2.5rem;
-    }
-
-    .logo { display: flex; align-items: center; gap: 6px; }
-
-    .logo-name {
-      font-family: var(--font-serif);
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
-      line-height: 1;
-    }
-
-    /* MAIN */
-    main {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      align-items: center;
-      max-width: 1080px;
-      margin: 0 auto;
-      padding: 0 2.5rem;
-      width: 100%;
-      gap: 4rem;
-      overflow: hidden;
-    }
-
-    /* LEFT */
-    .hero-left {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .hero-eyebrow {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--emerald);
-    }
-
-    .hero-eyebrow::before {
-      content: '';
-      display: block;
-      width: 20px;
-      height: 1.5px;
-      background: var(--emerald);
-      flex-shrink: 0;
-    }
-
-    .hero-title {
-      font-family: var(--font-serif);
-      font-size: 42px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-      line-height: 1.08;
-    }
-
-    .hero-title em {
-      font-style: italic;
-      color: var(--emerald);
-    }
-
-    .hero-body {
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text-3);
-      line-height: 1.7;
-      max-width: 380px;
-    }
-
-    .hero-cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      height: 44px;
-      padding: 0 26px;
-      background: var(--emerald);
-      color: var(--white);
-      border: none;
-      border-radius: 6px;
-      font-family: var(--font-sans);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      letter-spacing: -0.01em;
-      align-self: flex-start;
-    }
-
-    .hero-cta:hover {
-      background: var(--emerald-2);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(10,107,74,0.25);
-    }
-
-    .hero-cta-arrow { font-size: 15px; transition: transform 0.15s; }
-    .hero-cta:hover .hero-cta-arrow { transform: translateX(3px); }
-
-    /* RIGHT - SCORING CARD */
-    .scoring-card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .card-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-      padding-bottom: 0.875rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .card-title {
-      font-family: var(--font-serif);
-      font-size: 17px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .card-tag {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-3);
-      letter-spacing: 0.05em;
-      font-style: italic;
-    }
-
-    .scoring-list { display: flex; flex-direction: column; }
-
-    .scoring-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-      padding: 0.65rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .scoring-item:last-child { border-bottom: none; }
-
-    .scoring-numeral {
-      font-family: var(--font-serif);
-      font-style: italic;
-      font-size: 12px;
-      color: var(--emerald);
-      min-width: 18px;
-      margin-top: 2px;
-      opacity: 0.8;
-    }
-
-    .scoring-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2px;
-      letter-spacing: -0.01em;
-    }
-
-    .scoring-desc {
-      font-size: 11.5px;
-      color: var(--text-3);
-      line-height: 1.55;
-    }
-
-    .card-footer {
-      margin-top: 1rem;
-      padding: 0.75rem 0.875rem;
-      background: var(--emerald-3);
-      border-radius: 8px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .card-footer-check {
-      width: 17px; height: 17px;
-      border-radius: 50%;
-      background: var(--emerald);
-      color: white;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; flex-shrink: 0; margin-top: 1px;
-    }
-
-    .card-footer-text {
-      font-size: 11.5px;
-      color: var(--emerald);
-      line-height: 1.55;
-    }
-
-    .card-footer-text strong { font-weight: 600; }
-
-    /* FOOTER */
-    footer {
-      background: var(--white);
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 2.5rem;
-    }
-
-    .footer-text {
-      font-size: 11px;
-      color: var(--text-3);
-      font-family: var(--font-mono);
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FeatureIQ — AI Backlog Prioritisation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="FeatureIQ home">
+      <span class="brand-mark">FQ</span>
+      <span>FeatureIQ</span>
+    </a>
+    <nav class="header-nav" aria-label="Primary navigation">
+      <a href="#model">Scoring model</a>
+      <a href="#workflow">Workflow</a>
+      <button class="header-action" onclick="window.location.href='app.html'">Launch workspace</button>
+    </nav>
+  </header>
 
-<nav>
-  <div class="logo">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2L22 12L12 22L2 12Z" fill="none" stroke="#0a6b4a" stroke-width="1.5"/>
-      <path d="M12 7L17 12L12 17L7 12Z" fill="#0a6b4a"/>
-    </svg>
-    <div class="logo-name">FeatureIQ</div>
-  </div>
-</nav>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">AI backlog prioritisation</span>
+        <h1>A roadmap your whole org can <em>defend.</em></h1>
+        <p class="hero-subtitle">FeatureIQ reads your Jira export and scores every feature on impact, effort, alignment, and risk — with reasoning your stakeholders can trace, challenge, and sign off on.</p>
+        <div class="hero-actions">
+          <button class="button-primary" onclick="window.location.href='app.html'">Launch workspace&nbsp;&nbsp;→</button>
+          <a class="button-secondary" href="#model">See the scoring model</a>
+        </div>
+        <p class="hero-note">Works with any Jira CSV export&ensp;·&ensp;No integration to set up&ensp;·&ensp;Data stays in your session</p>
+      </div>
 
-<main>
-  <div class="hero-left">
-    <div class="hero-eyebrow">Enterprise Feature Prioritisation</div>
-    <h1 class="hero-title">
-      A roadmap your<br>
-      whole org can <em>defend.</em>
-    </h1>
-    <p class="hero-body">
-      FeatureIQ applies one transparent scoring model to your entire JIRA backlog — so every priority call rests on the same criteria, and every stakeholder can see exactly why it was made.
-    </p>
-    <button class="hero-cta" onclick="window.location.href='app.html'">
-      Get started <span class="hero-cta-arrow">→</span>
-    </button>
-  </div>
+      <aside class="product-preview" aria-label="Example of a scored backlog">
+        <div class="preview-toolbar">
+          <div>
+            <span class="preview-kicker">Backlog analysis</span>
+            <strong>8 features scored</strong>
+          </div>
+          <span class="status-pill">Ready to review</span>
+        </div>
 
-  <div class="scoring-card">
-    <div class="card-header">
-      <div class="card-title">The scoring model</div>
-      <div class="card-tag">transparent by design</div>
-    </div>
-    <div class="scoring-list">
-      <div class="scoring-item">
-        <div class="scoring-numeral">I</div>
-        <div>
-          <div class="scoring-name">User Impact</div>
-          <div class="scoring-desc">How significantly will this improve user experience or solve a real pain point, scored against your acceptance criteria and user stories.</div>
+        <div class="insight-callout">
+          <span class="callout-label">AI insight</span>
+          <p>Ship password reset and the onboarding checklist first — high impact, low effort, strong confidence.</p>
+        </div>
+
+        <div class="preview-table" role="table" aria-label="Ranked backlog preview">
+          <div class="preview-row preview-head" role="row">
+            <span>Feature</span>
+            <span>Impact</span>
+            <span>Effort</span>
+            <span>Decision</span>
+          </div>
+          <div class="preview-row" role="row">
+            <span>Password reset via email</span>
+            <span><b>9</b>/10</span>
+            <span>2 SP</span>
+            <span class="decision must">Must ship</span>
+          </div>
+          <div class="preview-row" role="row">
+            <span>Onboarding checklist</span>
+            <span><b>8</b>/10</span>
+            <span>3 SP</span>
+            <span class="decision must">Must ship</span>
+          </div>
+          <div class="preview-row" role="row">
+            <span>API access for developers</span>
+            <span><b>8</b>/10</span>
+            <span>21 SP</span>
+            <span class="decision review">Break down</span>
+          </div>
+        </div>
+
+        <div class="preview-footer">
+          <span><b>2</b> quick wins</span>
+          <span><b>1</b> high-risk item</span>
+          <span><b>High</b> confidence</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="model-section" id="model">
+      <div class="model-copy">
+        <span class="eyebrow">Enterprise feature prioritisation</span>
+        <h2>One transparent model. <em>Every</em> decision explained.</h2>
+        <p>FeatureIQ applies the same four criteria to your entire backlog — so every priority call rests on the same footing, and every stakeholder can see exactly why it was made.</p>
+        <button class="button-primary" onclick="window.location.href='app.html'">Get started&nbsp;&nbsp;→</button>
+      </div>
+
+      <div class="model-card">
+        <div class="model-card-head">
+          <h3>The scoring model</h3>
+          <span class="model-tag">transparent by design</span>
+        </div>
+        <ol class="model-list">
+          <li>
+            <span class="numeral">I</span>
+            <div>
+              <strong>User Impact</strong>
+              <p>How significantly this improves the user experience or solves a real pain point, scored against your acceptance criteria and user stories.</p>
+            </div>
+          </li>
+          <li>
+            <span class="numeral">II</span>
+            <div>
+              <strong>Engineering Effort</strong>
+              <p>The engineering cost, estimated on the Fibonacci scale and reconciled against your team's story points and velocity.</p>
+            </div>
+          </li>
+          <li>
+            <span class="numeral">III</span>
+            <div>
+              <strong>Strategic Alignment</strong>
+              <p>How well the work supports your stated team priorities, epics, and business goals for the quarter.</p>
+            </div>
+          </li>
+          <li>
+            <span class="numeral">IV</span>
+            <div>
+              <strong>Risk</strong>
+              <p>Dependencies, compliance concerns, and technical uncertainty — flagged before they become sprint blockers.</p>
+            </div>
+          </li>
+        </ol>
+        <div class="model-foot">
+          <span class="model-check">✓</span>
+          <p>Weighted to your team's goals, and <strong>fully auditable</strong> — every score traces back to its inputs. Powered by Claude.</p>
         </div>
       </div>
-      <div class="scoring-item">
-        <div class="scoring-numeral">II</div>
-        <div>
-          <div class="scoring-name">Engineering Effort</div>
-          <div class="scoring-desc">The engineering cost, estimated on the Fibonacci scale and reconciled against your team's story points and velocity.</div>
-        </div>
-      </div>
-      <div class="scoring-item">
-        <div class="scoring-numeral">III</div>
-        <div>
-          <div class="scoring-name">Strategic Alignment</div>
-          <div class="scoring-desc">How well does this align with your stated team priorities, epics, and business goals for the quarter.</div>
-        </div>
-      </div>
-      <div class="scoring-item">
-        <div class="scoring-numeral">IV</div>
-        <div>
-          <div class="scoring-name">Risk</div>
-          <div class="scoring-desc">Dependencies, compliance concerns, and technical uncertainty — flagged before they become sprint blockers.</div>
-        </div>
-      </div>
-    </div>
-    <div class="card-footer">
-      <div class="card-footer-check">✓</div>
-      <div class="card-footer-text">
-        Weighted to your team's goals, and <strong>fully auditable</strong> — every score traces back to its inputs. Powered by Claude AI.
-      </div>
-    </div>
-  </div>
-</main>
+    </section>
 
-<footer>
-  <div class="footer-text">© 2026 FeatureIQ — Feature prioritisation for product orgs</div>
-</footer>
+    <section class="workflow-section" id="workflow">
+      <div class="section-heading">
+        <span class="eyebrow">Workflow</span>
+        <h2>From raw export to a plan you can <em>present.</em></h2>
+      </div>
+      <div class="workflow-list">
+        <article>
+          <span class="step-number">01</span>
+          <h3>Upload your export</h3>
+          <p>Drop in a Jira CSV with summaries, acceptance criteria, story points, and epics. No integration, no setup.</p>
+        </article>
+        <article>
+          <span class="step-number">02</span>
+          <h3>Set your priorities</h3>
+          <p>Tell FeatureIQ what the quarter is optimising for — user impact, speed, compliance, or enterprise growth.</p>
+        </article>
+        <article>
+          <span class="step-number">03</span>
+          <h3>Review the ranking</h3>
+          <p>Every feature scored and tiered, with risk flags and the reasoning behind each recommendation.</p>
+        </article>
+        <article>
+          <span class="step-number">04</span>
+          <h3>Take it to the room</h3>
+          <p>Present the executive summary, or export the scored backlog straight into sprint planning.</p>
+        </article>
+      </div>
+    </section>
 
+    <section class="cta-band">
+      <h2>Ready when your backlog is.</h2>
+      <p>Upload a CSV and walk into your next planning meeting with the ranking already done.</p>
+      <button class="button-primary" onclick="window.location.href='app.html'">Launch workspace&nbsp;&nbsp;→</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>FeatureIQ</span>
+    <span>Scores are processed in your session — nothing is stored.</span>
+  </footer>
 </body>
 </html>

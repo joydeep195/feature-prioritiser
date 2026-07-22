@@ -1,13 +1,21 @@
 {
   "name": "feature-prioritiser",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AI-powered backlog prioritisation tool that uses Claude to score and rank JIRA backlog items.",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "test": "node test/run-tests.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "product-management",
+    "AI",
+    "backlog",
+    "prioritisation",
+    "JIRA",
+    "Claude"
+  ],
+  "author": "Joydeep",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
