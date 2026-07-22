@@ -55,23 +55,14 @@ function normalizeClaudeResults(parsed) {
   });
 }
 
-async function scoreFeatures(features, priorities, additionalContext) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing ANTHROPIC_API_KEY environment variable.');
-  }
+// Thrown when Claude's response itself was malformed (bad JSON, unexpected
+// shape) as opposed to a network/API-level failure. These are worth one
+// automatic retry since a fresh call almost always comes back clean; a
+// retry on a network/auth/rate-limit error would not help and could
+// compound the problem, so those are not wrapped in this type.
+class ClaudeOutputError extends Error {}
 
-  if (!features || !Array.isArray(features) || features.length === 0) {
-    throw new Error('No features provided for scoring.');
-  }
-
-  const prompt = buildPrompt(features, priorities, additionalContext);
-
-  const fetchImpl = global.fetch;
-  if (typeof fetchImpl !== 'function') {
-    throw new Error('Global fetch is not available. Run on Node 18+ or add a fetch polyfill.');
-  }
-
+async function requestScoresOnce(prompt, apiKey, fetchImpl) {
   const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -81,7 +72,7 @@ async function scoreFeatures(features, priorities, additionalContext) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2000,
+      max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }]
     })
   });
@@ -115,16 +106,53 @@ async function scoreFeatures(features, priorities, additionalContext) {
   } catch (err) {
     const match = cleaned.match(/(\[.*\])/s);
     if (!match) {
-      throw new Error(`Failed to parse Claude response as JSON: ${err.message}`);
+      throw new ClaudeOutputError(`Failed to parse Claude response as JSON: ${err.message}`);
     }
     try {
       parsed = JSON.parse(match[1]);
     } catch (innerErr) {
-      throw new Error(`Failed to parse Claude response JSON content: ${innerErr.message}`);
+      throw new ClaudeOutputError(`Failed to parse Claude response JSON content: ${innerErr.message}`);
     }
   }
 
-  return normalizeClaudeResults(parsed);
+  try {
+    return normalizeClaudeResults(parsed);
+  } catch (err) {
+    throw new ClaudeOutputError(err.message);
+  }
+}
+
+async function scoreFeatures(features, priorities, additionalContext) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing ANTHROPIC_API_KEY environment variable.');
+  }
+
+  if (!features || !Array.isArray(features) || features.length === 0) {
+    throw new Error('No features provided for scoring.');
+  }
+
+  const fetchImpl = global.fetch;
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('Global fetch is not available. Run on Node 18+ or add a fetch polyfill.');
+  }
+
+  const prompt = buildPrompt(features, priorities, additionalContext);
+
+  const maxAttempts = 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await requestScoresOnce(prompt, apiKey, fetchImpl);
+    } catch (err) {
+      if (!(err instanceof ClaudeOutputError) || attempt === maxAttempts) {
+        throw err;
+      }
+      // Malformed output on this attempt — retry once with a fresh call.
+    }
+  }
+
+  // Unreachable, but keeps control flow explicit for linters.
+  throw new Error('Scoring failed after retry.');
 }
 
 module.exports = { scoreFeatures, normalizeClaudeResults };

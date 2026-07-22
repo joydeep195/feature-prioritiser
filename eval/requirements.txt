@@ -1,0 +1,6 @@
+# No hard dependencies — harness.py uses only the standard library.
+#
+# Optional: install scipy for scipy's tie-corrected Spearman correlation.
+# Without it, harness.py falls back to a manual rank-correlation
+# implementation that handles ties but isn't scipy-verified.
+scipy
